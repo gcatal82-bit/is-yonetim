@@ -1,22 +1,23 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#1e40af">
-  <meta name="description" content="İş Yönetim Sistemi - 2 Kişi Senkronizasyon">
-  
-  <title>İş Yönetim Sistemi</title>
-  
-  <!-- PWA Manifest -->
-  <link rel="manifest" href="manifest.json">
-  
-  <!-- App Icons -->
-  <link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
-  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
-  
+  <title>İş Yönetim</title>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
-
-  <style>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+</head>
+<body style="font-family: Arial; padding: 20px;">
+  <h1>📊 İş Yönetim Sistemi</h1>
+  <div id="app"></div>
+  <script>
+    const config = {
+      apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
+      authDomain: "is-yonetim-2551c.firebaseapp.com",
+      databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "is-yonetim-2551c"
+    };
+    firebase.initializeApp(config);
+    document.getElementById('app').innerHTML = '<p>Hoşgeldiniz! Uygulama hazırlanıyor...</p>';
+  </script>
+</body>
+</html>
