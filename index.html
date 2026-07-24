@@ -4,14 +4,88 @@
   <title>İş Yönetim</title>
 </head>
 <body style="font-family: Arial; padding: 40px; text-align: center; background: #f0f0f0;">
-  <h1>📊 İş Yönetim Sistemi</h1>
-  <p>Hoşgeldiniz!</p>
+  <div id="app"></div>
   
-  <div style="background: white; padding: 20px; border-radius: 8px; max-width: 300px; margin: 0 auto;">
-    <input type="email" placeholder="Email" id="email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
-    <input type="password" placeholder="Şifre" id="password" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd;">
-    <button onclick="alert('Email: ' + document.getElementById('email').value)" style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Giriş Yap</button>
-    <button onclick="alert('Hesap Oluşturuluyor!')" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer;">Hesap Oluştur</button>
-  </div>
+  <script>
+    let users = JSON.parse(localStorage.getItem('users')) || {};
+    let currentUser = localStorage.getItem('currentUser');
+    
+    function showLogin() {
+      document.getElementById('app').innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 300px; margin: 50px auto;">
+          <h1>📊 İş Yönetim Sistemi</h1>
+          <input type="email" id="email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
+          <input type="password" id="password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
+          <button onclick="login()" style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Giriş Yap</button>
+          <button onclick="showSignup()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer;">Hesap Oluştur</button>
+        </div>
+      `;
+    }
+    
+    function showSignup() {
+      document.getElementById('app').innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 300px; margin: 50px auto;">
+          <h1>📊 Hesap Oluştur</h1>
+          <input type="text" id="name" placeholder="Adınız" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
+          <input type="email" id="signup-email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
+          <input type="password" id="signup-password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
+          <button onclick="signup()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Oluştur</button>
+          <button onclick="showLogin()" style="width: 100%; padding: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">Giriş Sayfasına Dön</button>
+        </div>
+      `;
+    }
+    
+    function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      if (users[email] && users[email].password === password) {
+        localStorage.setItem('currentUser', email);
+        showDashboard();
+      } else {
+        alert('Email veya şifre yanlış!');
+      }
+    }
+    
+    function signup() {
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      
+      if (users[email]) {
+        alert('Bu email zaten kullanılıyor!');
+      } else {
+        users[email] = {name, password};
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('Hesap oluşturuldu! Giriş yapabilirsiniz.');
+        showLogin();
+      }
+    }
+    
+    function showDashboard() {
+      const email = localStorage.getItem('currentUser');
+      const user = users[email];
+      
+      document.getElementById('app').innerHTML = `
+        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 400px; margin: 50px auto;">
+          <h1>📊 Hoşgeldiniz!</h1>
+          <p>👤 ${user.name}</p>
+          <p>📧 ${email}</p>
+          <button onclick="logout()" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer;">Çıkış Yap</button>
+        </div>
+      `;
+    }
+    
+    function logout() {
+      localStorage.removeItem('currentUser');
+      showLogin();
+    }
+    
+    if (currentUser) {
+      showDashboard();
+    } else {
+      showLogin();
+    }
+  </script>
 </body>
 </html>
