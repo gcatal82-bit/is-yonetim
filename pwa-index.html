@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1e40af">
+  <meta name="description" content="İş Yönetim Sistemi - 2 Kişi Senkronizasyon">
+  
+  <title>İş Yönetim Sistemi</title>
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="manifest.json">
+  
+  <!-- App Icons -->
+  <link rel="icon" type="image/png" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+  <link rel="apple-touch-icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8f8f8;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #app {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input, select, textarea, button {
+      -webkit-user-select: text;
+      user-select: text;
+      font-family: inherit;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    input[type="password"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="date"],
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      font-weight: 600;
+      border-radius: 6px;
+      transition: all 0.2s;
+      -webkit-touch-callout: none;
+    }
+
+    button:active {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+
+    .offline-badge {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: #f59e0b;
+      color: white;
+      padding: 8px;
+      text-align: center;
+      font-size: 12px;
+      z-index: 1000;
+      display: none;
+    }
+
+    .offline-badge.show {
+      display: block;
+    }
+
+    /* iOS Notch Support */
+    @supports(padding: max(0px)) {
+      body {
+        padding-left: max(12px, env(safe-area-inset-left));
+        padding-right: max(12px, env(safe-area-inset-right));
+        padding-top: max(12px, env(safe-area-inset-top));
+        padding-bottom: max(12px, env(safe-area-inset-bottom));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-badge" id="offline-badge">📡 Çevrimdışı Mod - Veriler Kaydediliyor</div>
+  <div id="app"></div>
+
+  <script>
+    // ========== FIREBASE AYARLARI ==========
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
+      authDomain: "is-yonetim-2551c.firebaseapp.com",
+      databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "is-yonetim-2551c",
+      storageBucket: "is-yonetim-2551c.firebasestorage.app",
+      messagingSenderId: "692969462148",
+      appId: "1:692969462148:web:e0cd274b97d92e9d5565d1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+    const auth = firebase.auth();
+
+    // ========== OFFLINE DETECTION ==========
+    const connectedRef = database.ref('.info/connected');
+    let isOnline = true;
+
+    connectedRef.on('value', (snapshot) => {
+      isOnline = snapshot.val() === true;
+      updateOfflineBadge();
+    });
+
+    function updateOfflineBadge() {
+      const badge = document.getElementById('offline-badge');
+      if (!isOnline) {
+        badge.classList.add('show');
+      } else {
+        badge.classList.remove('show');
+      }
+    }
+
+    // ========== UYGULAMA ==========
+    class IsYonetimApp {
+      constructor() {
+        this.currentUser = null;
+        this.userId = null;
+        this.customers = {};
+        this.transactions = {};
+        this.expenses = {};
+        this.activeTab = 'dashboard';
+        this.showForm = false;
+        
+        this.init();
+      }
+
+      init() {
+        auth.onAuthStateChanged((user) => {
+          if (user) {
+            this.currentUser = user;
+            this.userId = user.uid;
+            this.loadDataFromFirebase();
+            this.render();
+          } else {
+            this.showLoginScreen();
+          }
+        });
+      }
+
+      showLoginScreen() {
+        const app = document.getElementById('app');
+        app.innerHTML = `
+          <div style="max-width: 400px; margin: 50px auto; padding: 20px;">
+            <div style="background: #1e40af; color: white; padding: 30px; border-radius: 12px; text-align: center; margin-bottom: 30px;">
+              <h1 style="margin: 0 0 5px 0; font-size: 28px;">📊 İş Yönetim</h1>
+              <p style="margin: 10px 0 0 0; opacity: 0.9;">2 Kişi İçin Senkronizasyon</p>
+            </div>
+
+            <div id="auth-error" style="display: none; background: #fee2e2; color: #991b1b; padding: 12px; border-radius: 6px; margin-bottom: 15px; font-size: 13px;"></div>
+
+            <div style="background: white; padding: 20px; border-radius: 8px; border: 0.5px solid #e5e7eb;">
+              <h2 style="margin: 0 0 20px 0; font-size: 16px;">Giriş Yap</h2>
+              
+              <input type="email" id="email" placeholder="ortak@example.com" style="">
+              <input type="password" id="password" placeholder="Şifre">
+
+              <button onclick="app.handleLogin()" style="width: 100%; padding: 12px; background: #1e40af; color: white; margin-bottom: 10px;">
+                Giriş Yap
+              </button>
+
+              <button onclick="app.toggleSignup()" style="width: 100%; padding: 12px; background: white; color: #1e40af; border: 1px solid #1e40af; margin-bottom: 0;">
+                Yeni Hesap Oluştur
+              </button>
+
+              <div id="signup-form" style="display: none; margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <h3 style="margin: 0 0 15px 0; font-size: 14px;">Yeni Hesap</h3>
+                
+                <input type="text" id="signup-name" placeholder="Adınız">
+                <input type="email" id="signup-email" placeholder="Email">
+                <input type="password" id="signup-password" placeholder="Şifre (6+ karakter)">
+
+                <button onclick="app.handleSignup()" style="width: 100%; padding: 12px; background: #059669; color: white; margin-bottom: 0;">
+                  Hesap Oluştur
+                </button>
+              </div>
+
+              <div style="margin-top: 20px; background: #ecfdf5; padding: 12px; border-radius: 6px; font-size: 12px; line-height: 1.6; color: #166534;">
+                <strong>💡 İpucu:</strong> Her iki kullanıcı <strong>aynı email/şifre</strong> ile giriş yapmalı.
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.getElementById('email').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') this.handleLogin();
+        });
+        document.getElementById('password').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') this.handleLogin();
+        });
+      }
+
+      toggleSignup() {
+        const form = document.getElementById('signup-form');
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      }
+
+      handleLogin() {
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+
+        if (!email || !password) {
+          this.showAuthError('Email ve şifre boş bırakılamaz');
+          return;
+        }
+
+        auth.signInWithEmailAndPassword(email, password).catch((error) => {
+          this.showAuthError(error.message);
+        });
+      }
+
+      handleSignup() {
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const name = document.getElementById('signup-name').value;
+
+        if (!email || !password || !name) {
+          this.showAuthError('Tüm alanları doldurunuz');
+          return;
+        }
+
+        if (password.length < 6) {
+          this.showAuthError('Şifre en az 6 karakter olmalı');
+          return;
+        }
+
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(() => {
+            const user = auth.currentUser;
+            database.ref('users/' + user.uid).set({ name: name, email: email });
+          })
+          .catch((error) => {
+            this.showAuthError(error.message);
+          });
+      }
+
+      showAuthError(message) {
+        const errorDiv = document.getElementById('auth-error');
+        if (errorDiv) {
+          errorDiv.style.display = 'block';
+          errorDiv.textContent = message;
+        }
+      }
+
+      loadDataFromFirebase() {
+        database.ref('customers/' + this.userId).on('value', (snapshot) => {
+          this.customers = snapshot.val() || {};
+          this.render();
+        });
+
+        database.ref('transactions/' + this.userId).on('value', (snapshot) => {
+          this.transactions = snapshot.val() || {};
+          this.render();
+        });
+
+        database.ref('expenses/' + this.userId).on('value', (snapshot) => {
+          this.expenses = snapshot.val() || {};
+          this.render();
+        });
+      }
+
+      addCustomer(event) {
+        event.preventDefault();
+        const form = event.target;
+        
+        const newCustomer = {
+          isim: form.isim.value,
+          soyisim: form.soyisim.value,
+          vergiNo: form.vergiNo.value,
+          sehir: form.sehir.value,
+          telefon: form.telefon.value,
+          tarih: new Date().toLocaleDateString('tr-TR'),
+          timestamp: Date.now()
+        };
+
+        const id = 'cust_' + Date.now();
+        database.ref('customers/' + this.userId + '/' + id).set(newCustomer);
+        
+        form.reset();
+        this.showForm = false;
+        this.render();
+      }
+
+      addTransaction(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        const newTrans = {
+          musteriBilgisi: form.musteriBilgisi.value,
+          satirlanUrun: parseFloat(form.satirlanUrun.value) || 0,
+          verilenSiparis: parseFloat(form.verilenSiparis.value) || 0,
+          tahsilEdilenPara: parseFloat(form.tahsilEdilenPara.value) || 0,
+          veresiye: parseFloat(form.veresiye.value) || 0,
+          hediye: parseFloat(form.hediye.value) || 0,
+          seradan: parseFloat(form.seradan.value) || 0,
+          tarih: form.tarih.value || new Date().toLocaleDateString('tr-TR'),
+          timestamp: Date.now()
+        };
+
+        const id = 'trans_' + Date.now();
+        database.ref('transactions/' + this.userId + '/' + id).set(newTrans);
+        
+        form.reset();
+        this.showForm = false;
+        this.render();
+      }
+
+      addExpense(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        const newExp = {
+          aciklama: form.aciklama.value,
+          tutar: parseFloat(form.tutar.value) || 0,
+          kategori: form.kategori.value,
+          tarih: form.tarih.value || new Date().toLocaleDateString('tr-TR'),
+          timestamp: Date.now()
+        };
+
+        const id = 'exp_' + Date.now();
+        database.ref('expenses/' + this.userId + '/' + id).set(newExp);
+        
+        form.reset();
+        this.showForm = false;
+        this.render();
+      }
+
+      calculateStats() {
+        const transArray = Object.values(this.transactions);
+        const expArray = Object.values(this.expenses);
+
+        return {
+          toplamSatilan: transArray.reduce((a, b) => a + (b.satirlanUrun || 0), 0),
+          toplamSiparis: transArray.reduce((a, b) => a + (b.verilenSiparis || 0), 0),
+          toplamTahsil: transArray.reduce((a, b) => a + (b.tahsilEdilenPara || 0), 0),
+          toplamVeresiye: transArray.reduce((a, b) => a + (b.veresiye || 0), 0),
+          toplamHediye: transArray.reduce((a, b) => a + (b.hediye || 0), 0),
+          toplamSeradan: transArray.reduce((a, b) => a + (b.seradan || 0), 0),
+          toplamGider: expArray.reduce((a, b) => a + (b.tutar || 0), 0)
+        };
+      }
+
+      logout() {
+        auth.signOut();
+      }
+
+      render() {
+        const stats = this.calculateStats();
+        const customersArray = Object.values(this.customers);
+        const transactionsArray = Object.values(this.transactions).sort((a, b) => b.timestamp - a.timestamp);
+        const expensesArray = Object.values(this.expenses).sort((a, b) => b.timestamp - a.timestamp);
+
+        const app = document.getElementById('app');
+        app.innerHTML = `
+          <div style="max-width: 500px; margin: 0 auto; padding: 10px;">
+            
+            <div style="background: #1e40af; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+              <h1 style="margin: 0 0 5px 0; font-size: 20px;">📊 İş Yönetim Sistemi</h1>
+              <p style="margin: 0; font-size: 12px; opacity: 0.9;">👤 ${this.currentUser.email}</p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 15px;">
+              ${['dashboard', 'musteriler', 'islemler', 'giderler'].map(tab => `
+                <button onclick="app.activeTab = '${tab}'; app.render();"
+                  style="padding: 10px; background: ${this.activeTab === tab ? '#1e40af' : '#e5e7eb'}; color: ${this.activeTab === tab ? 'white' : '#1f2937'}; font-size: 18px;">
+                  ${tab === 'dashboard' ? '📊' : tab === 'musteriler' ? '👥' : tab === 'islemler' ? '📝' : '💰'}
+                </button>
+              `).join('')}
+            </div>
+
+            ${this.activeTab === 'dashboard' ? this.renderDashboard(stats, customersArray) : ''}
+            ${this.activeTab === 'musteriler' ? this.renderCustomers(customersArray) : ''}
+            ${this.activeTab === 'islemler' ? this.renderTransactions(transactionsArray) : ''}
+            ${this.activeTab === 'giderler' ? this.renderExpenses(expensesArray) : ''}
+
+            <div style="margin-top: 20px; text-align: center; padding-bottom: 20px;">
+              <button onclick="app.logout()" style="padding: 10px 20px; background: #dc2626; color: white;">
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      renderDashboard(stats, customersArray) {
+        return `
+          <div>
+            <h2 style="margin-top: 0; margin-bottom: 15px;">📈 İstatistikler</h2>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px;">
+              ${this.renderStatCard('Satılan (kg)', stats.toplamSatilan)}
+              ${this.renderStatCard('Sipariş (kg)', stats.toplamSiparis)}
+              ${this.renderStatCard('Tahsil (₺)', stats.toplamTahsil)}
+              ${this.renderStatCard('Veresiye (₺)', stats.toplamVeresiye)}
+              ${this.renderStatCard('Hediye (kg)', stats.toplamHediye)}
+              ${this.renderStatCard('Serada (kg)', stats.toplamSeradan)}
+              ${this.renderStatCard('Gider (₺)', stats.toplamGider)}
+              ${this.renderStatCard('Müşteri', customersArray.length)}
+            </div>
+
+            <div style="background: white; padding: 15px; border-radius: 8px; font-size: 12px; line-height: 1.6; border-left: 4px solid #1e40af;">
+              <h3 style="margin-top: 0;">✓ Senkronizasyon Aktif</h3>
+              <p style="margin: 8px 0;">Her iki cihazda otomatik güncellenir</p>
+              <p style="margin: 8px 0;">İnternet yok = sonra senkron olur</p>
+            </div>
+          </div>
+        `;
+      }
+
+      renderStatCard(label, value) {
+        return `
+          <div style="background: white; padding: 12px; border-radius: 6px; text-align: center; border: 0.5px solid #e5e7eb;">
+            <p style="margin: 0 0 5px 0; font-size: 11px; color: #666;">${label}</p>
+            <p style="margin: 0; font-size: 18px; font-weight: bold; color: #1e40af;">
+              ${typeof value === 'number' ? (value % 1 === 0 ? value : value.toFixed(2)) : 0}
+            </p>
+          </div>
+        `;
+      }
+
+      renderCustomers(customersArray) {
+        return `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h2 style="margin: 0;">👥 Müşteriler (${customersArray.length})</h2>
+              <button onclick="app.showForm = !app.showForm; app.render();" style="padding: 8px 12px; background: #1e40af; color: white; font-size: 18px;">
+                ${this.showForm ? '✕' : '✚'}
+              </button>
+            </div>
+
+            ${this.showForm ? `
+              <form onsubmit="app.addCustomer(event)" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <input type="text" name="isim" placeholder="İsim" required>
+                <input type="text" name="soyisim" placeholder="Soyisim" required>
+                <input type="text" name="vergiNo" placeholder="Vergi Numarası">
+                <input type="text" name="sehir" placeholder="Şehir" required>
+                <input type="tel" name="telefon" placeholder="Telefon" required>
+                <button type="submit" style="width: 100%; padding: 10px; background: #1e40af; color: white;">✓ Kaydet</button>
+              </form>
+            ` : ''}
+
+            <div style="display: grid; gap: 10px;">
+              ${customersArray.length === 0 ? '<p style="text-align: center; color: #666; padding: 20px;">Müşteri yok</p>' : ''}
+              ${customersArray.map(c => `
+                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #1e40af;">
+                  <p style="margin: 0 0 5px 0; font-weight: 600;">${c.isim} ${c.soyisim}</p>
+                  <p style="margin: 2px 0; font-size: 12px; color: #666;">📱 ${c.telefon} | 🏙️ ${c.sehir}</p>
+                  ${c.vergiNo ? `<p style="margin: 2px 0; font-size: 12px; color: #666;">🏷️ ${c.vergiNo}</p>` : ''}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      renderTransactions(transactionsArray) {
+        return `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h2 style="margin: 0;">📝 Satış & Sipariş</h2>
+              <button onclick="app.showForm = !app.showForm; app.render();" style="padding: 8px 12px; background: #1e40af; color: white; font-size: 18px;">
+                ${this.showForm ? '✕' : '✚'}
+              </button>
+            </div>
+
+            ${this.showForm ? `
+              <form onsubmit="app.addTransaction(event)" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <input type="text" name="musteriBilgisi" placeholder="Müşteri" required>
+                <input type="number" step="0.1" name="satirlanUrun" placeholder="Satılan (kg)">
+                <input type="number" step="0.1" name="verilenSiparis" placeholder="Sipariş (kg)">
+                <input type="number" step="0.01" name="tahsilEdilenPara" placeholder="Tahsil (₺)">
+                <input type="number" step="0.01" name="veresiye" placeholder="Veresiye (₺)">
+                <input type="number" step="0.1" name="hediye" placeholder="Hediye (kg)">
+                <input type="number" step="0.1" name="seradan" placeholder="Seradan (kg)">
+                <input type="date" name="tarih">
+                <button type="submit" style="width: 100%; padding: 10px; background: #1e40af; color: white;">✓ Kaydet</button>
+              </form>
+            ` : ''}
+
+            <div style="display: grid; gap: 10px;">
+              ${transactionsArray.length === 0 ? '<p style="text-align: center; color: #666; padding: 20px;">İşlem yok</p>' : ''}
+              ${transactionsArray.map(t => `
+                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #0ea5e9;">
+                  <p style="margin: 0 0 8px 0; font-weight: 600;">${t.musteriBilgisi}</p>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px;">
+                    ${t.satirlanUrun > 0 ? `<p style="margin: 0; background: #f0f9ff; padding: 4px 6px; border-radius: 3px;">📦 ${t.satirlanUrun} kg</p>` : ''}
+                    ${t.verilenSiparis > 0 ? `<p style="margin: 0; background: #f0f9ff; padding: 4px 6px; border-radius: 3px;">📋 ${t.verilenSiparis} kg</p>` : ''}
+                    ${t.tahsilEdilenPara > 0 ? `<p style="margin: 0; background: #f0fdf4; padding: 4px 6px; border-radius: 3px;">💵 ${t.tahsilEdilenPara} ₺</p>` : ''}
+                    ${t.veresiye > 0 ? `<p style="margin: 0; background: #fef3c7; padding: 4px 6px; border-radius: 3px;">📊 ${t.veresiye} ₺</p>` : ''}
+                    ${t.hediye > 0 ? `<p style="margin: 0; background: #fce7f3; padding: 4px 6px; border-radius: 3px;">🎁 ${t.hediye} kg</p>` : ''}
+                    ${t.seradan > 0 ? `<p style="margin: 0; background: #ecfdf5; padding: 4px 6px; border-radius: 3px;">🌾 ${t.seradan} kg</p>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      renderExpenses(expensesArray) {
+        return `
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+              <h2 style="margin: 0;">💰 Giderler</h2>
+              <button onclick="app.showForm = !app.showForm; app.render();" style="padding: 8px 12px; background: #1e40af; color: white; font-size: 18px;">
+                ${this.showForm ? '✕' : '✚'}
+              </button>
+            </div>
+
+            ${this.showForm ? `
+              <form onsubmit="app.addExpense(event)" style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                <select name="kategori" required>
+                  <option value="">Kategori Seçin</option>
+                  <option value="Elektrik">⚡ Elektrik</option>
+                  <option value="Su">💧 Su</option>
+                  <option value="Kira">🏠 Kira</option>
+                  <option value="Malzeme">🛠️ Malzeme</option>
+                  <option value="Diğer">📌 Diğer</option>
+                </select>
+                <input type="text" name="aciklama" placeholder="Açıklama" required>
+                <input type="number" step="0.01" name="tutar" placeholder="Tutar (₺)" required>
+                <input type="date" name="tarih">
+                <button type="submit" style="width: 100%; padding: 10px; background: #1e40af; color: white;">✓ Kaydet</button>
+              </form>
+            ` : ''}
+
+            <div style="display: grid; gap: 10px;">
+              ${expensesArray.length === 0 ? '<p style="text-align: center; color: #666; padding: 20px;">Gider yok</p>' : ''}
+              ${expensesArray.map(e => `
+                <div style="background: white; padding: 12px; border-radius: 6px; border-left: 4px solid #dc2626;">
+                  <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div>
+                      <p style="margin: 0 0 3px 0; font-weight: 600;">${e.aciklama}</p>
+                      <p style="margin: 0; font-size: 12px; color: #666;">📂 ${e.kategori}</p>
+                    </div>
+                    <p style="margin: 0; font-size: 14px; font-weight: 600; color: #dc2626;">${e.tutar} ₺</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    // Uygulamayı başlat
+    let app = new IsYonetimApp();
+    window.app = app;
+
+    // Service Worker kayıt et
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(() => {
+        // Service Worker kaydı başarısız, normal web sayfası olarak çalışır
+      });
+    }
+  </script>
+</body>
+</html>
