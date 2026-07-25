@@ -3,78 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim - Supabase</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <title>📊 İş Yönetim</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
-    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 20; }
-    .header h1 { font-size: 28px; margin-bottom: 5px; }
-    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #e5e7eb; position: sticky; top: 70px; z-index: 15; }
-    .tab { padding: 15px; text-align: center; cursor: pointer; font-size: 24px; }
+    body { font-family: Arial; background: #f5f5f5; padding-bottom: 80px; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; }
+    .header h1 { font-size: 24px; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #e5e7eb; }
+    .tab { padding: 12px; text-align: center; cursor: pointer; font-size: 20px; }
     .tab.active { background: #1e40af; color: white; }
     .container { max-width: 600px; margin: 0 auto; padding: 15px; }
-    .stat { background: white; padding: 15px; margin: 10px 0; border-radius: 8px; border-left: 4px solid #1e40af; text-align: center; }
-    .stat-val { font-size: 20px; font-weight: bold; color: #1e40af; }
-    .btn-add { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 15px; font-weight: 600; }
-    .form { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .stat { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #1e40af; text-align: center; }
+    .stat-val { font-size: 18px; font-weight: bold; color: #1e40af; }
+    .btn-add { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; }
+    .form { background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
     input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; }
     .form button { width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-    .item { background: white; padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #0ea5e9; position: relative; }
-    .item-del { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
-    .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; margin-top: 20px; }
-    .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; }
+    .item { background: white; padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #0ea5e9; }
+    .item-del { float: right; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+    .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; }
+    .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 8px; }
     .login-input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
     .login-btn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; font-weight: 600; }
-    .btn-primary { background: #1e40af; color: white; }
-    .btn-success { background: #059669; color: white; }
     .hidden { display: none; }
   </style>
 </head>
 <body>
-  <div id="app"></div>
+  <div id="app">Loading...</div>
 
   <script>
+    // Supabase setup
     const SUPABASE_URL = 'https://eifoihvbfnbgzireabqm.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_BQAV8fLpW9rjSSDYcr7-lQ_uHOvjxSO';
-    
-    const { createClient } = window.supabase;
-    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    let current_user = null;
+    let current_user = localStorage.getItem('current_user');
     let tab = 'dash';
-    let app_data = { musteriler: {}, satislar: {}, giderler: {} };
-
-    async function check_auth() {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        current_user = data.session.user.email;
-        load_data();
-      } else {
-        show_login();
-      }
-    }
-
-    async function load_data() {
-      const { data } = await supabase.from('app_data').select('*').eq('user_email', current_user);
-      if (data && data.length > 0) {
-        app_data = JSON.parse(data[0].data);
-      } else {
-        app_data = { musteriler: {}, satislar: {}, giderler: {} };
-      }
-      show();
-    }
-
-    async function save_data() {
-      const { data } = await supabase.from('app_data').select('id').eq('user_email', current_user).single();
-      
-      if (data) {
-        await supabase.from('app_data').update({ data: JSON.stringify(app_data) }).eq('id', data.id);
-      } else {
-        await supabase.from('app_data').insert({ user_email: current_user, data_type: 'all', data: JSON.stringify(app_data) });
-      }
-      show();
-    }
+    let app_data = JSON.parse(localStorage.getItem('app_data_' + current_user)) || { mus: {}, sat: {}, gid: {} };
 
     function show_login() {
       document.getElementById('app').innerHTML = `
@@ -84,14 +48,14 @@
             <h2>Giriş Yap</h2>
             <input type="email" id="em" placeholder="Email" class="login-input">
             <input type="password" id="pw" placeholder="Şifre" class="login-input">
-            <button onclick="login()" class="login-btn btn-primary">Giriş Yap</button>
-            <button onclick="tog()" class="login-btn btn-success" style="margin-top: 10px;">Hesap Oluştur</button>
+            <button onclick="login()" class="login-btn" style="background: #1e40af; color: white;">Giriş Yap</button>
+            <button onclick="tog()" class="login-btn" style="background: #059669; color: white; margin-top: 10px;">Hesap Oluştur</button>
           </div>
           <div id="signup" class="hidden">
             <h2>Hesap Oluştur</h2>
             <input type="email" id="se" placeholder="Email" class="login-input">
             <input type="password" id="sp" placeholder="Şifre" class="login-input">
-            <button onclick="signup()" class="login-btn btn-success">Oluştur</button>
+            <button onclick="signup()" class="login-btn" style="background: #059669; color: white;">Oluştur</button>
             <button onclick="tog()" class="login-btn" style="background: #666; color: white;">Geri</button>
           </div>
         </div>
@@ -103,44 +67,66 @@
       document.getElementById('signup').classList.toggle('hidden');
     }
 
-    async function login() {
+    function login() {
       let e = document.getElementById('em').value;
       let p = document.getElementById('pw').value;
-      const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
-      if (error) alert(error.message);
-      else { current_user = e; load_data(); }
+      if (!e || !p) { alert('Doldurun'); return; }
+      
+      // Supabase auth
+      fetch(SUPABASE_URL + '/auth/v1/token?grant_type=password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ email: e, password: p })
+      }).then(r => r.json()).then(d => {
+        if (d.error) alert('Hatalı!');
+        else {
+          current_user = e;
+          localStorage.setItem('current_user', e);
+          app_data = JSON.parse(localStorage.getItem('app_data_' + e)) || { mus: {}, sat: {}, gid: {} };
+          show();
+        }
+      }).catch(e => alert('Bağlantı hatası'));
     }
 
-    async function signup() {
+    function signup() {
       let e = document.getElementById('se').value;
       let p = document.getElementById('sp').value;
-      const { error } = await supabase.auth.signUp({ email: e, password: p });
-      if (error) alert(error.message);
-      else alert('Hesap oluşturuldu! Giriş yapabilirsiniz.');
-      tog();
+      if (!e || !p) { alert('Doldurun'); return; }
+      
+      fetch(SUPABASE_URL + '/auth/v1/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY },
+        body: JSON.stringify({ email: e, password: p })
+      }).then(r => r.json()).then(d => {
+        if (d.error) alert('Var');
+        else { alert('Oldu!'); tog(); }
+      }).catch(e => alert('Bağlantı hatası'));
     }
 
     function add_mus() {
       let isim = document.getElementById('misim').value;
       let soy = document.getElementById('msoy').value;
       if (!isim || !soy) { alert('Doldur'); return; }
-      app_data.musteriler['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
+      app_data.mus['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
       save_data();
+      document.getElementById('misim').value = '';
     }
 
     function add_sat() {
       let mus = document.getElementById('smus').value;
       if (!mus) { alert('Müşteri'); return; }
-      app_data.satislar['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0, sip: parseFloat(document.getElementById('ssip').value) || 0, tah: parseFloat(document.getElementById('stah').value) || 0 };
+      app_data.sat['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0, sip: parseFloat(document.getElementById('ssip').value) || 0, tah: parseFloat(document.getElementById('stah').value) || 0 };
       save_data();
+      document.getElementById('smus').value = '';
     }
 
     function add_gid() {
       let kat = document.getElementById('gkat').value;
       let aç = document.getElementById('gaç').value;
       if (!kat || !aç) { alert('Doldur'); return; }
-      app_data.giderler['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
+      app_data.gid['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
       save_data();
+      document.getElementById('gkat').value = '';
     }
 
     function del(tip, id) {
@@ -149,17 +135,23 @@
       save_data();
     }
 
-    async function logout() {
-      await supabase.auth.signOut();
+    function save_data() {
+      localStorage.setItem('app_data_' + current_user, JSON.stringify(app_data));
+      show();
+    }
+
+    function logout() {
+      localStorage.removeItem('current_user');
       current_user = null;
       show_login();
     }
 
     function show() {
       if (!current_user) { show_login(); return; }
-      let m = Object.entries(app_data.musteriler);
-      let s = Object.entries(app_data.satislar);
-      let g = Object.entries(app_data.giderler);
+      
+      let m = Object.entries(app_data.mus);
+      let s = Object.entries(app_data.sat);
+      let g = Object.entries(app_data.gid);
       let tsat = s.reduce((a,b) => a + (b[1].sat || 0), 0);
       let tsip = s.reduce((a,b) => a + (b[1].sip || 0), 0);
       let ttah = s.reduce((a,b) => a + (b[1].tah || 0), 0);
@@ -175,24 +167,24 @@
 
       if (tab === 'mus') {
         h += `<button class="btn-add" onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Müşteri Ekle</button><div id="fmus" class="form hidden"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><input type="text" id="mshr" placeholder="Şehir"><button onclick="add_mus()">Kaydet</button></div>`;
-        m.forEach(([id,x]) => h += `<div class="item">${x.isim} ${x.soy}<br><small>📱 ${x.tel} | 🏙️ ${x.shr}</small><button class="item-del" onclick="del('musteriler','${id}')">Sil</button></div>`);
+        m.forEach(([id,x]) => h += `<div class="item">${x.isim} ${x.soy}<br><small>📱 ${x.tel} | 🏙️ ${x.shr}</small><button class="item-del" onclick="del('mus','${id}')">Sil</button></div>`);
       }
 
       if (tab === 'sat') {
         h += `<button class="btn-add" onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Satış Ekle</button><div id="fsat" class="form hidden"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><input type="number" id="ssip" placeholder="Sipariş (kg)"><input type="number" id="stah" placeholder="Tahsil (₺)"><button onclick="add_sat()">Kaydet</button></div>`;
-        s.forEach(([id,x]) => h += `<div class="item">${x.mus}<br><small>📦 ${x.sat}kg | 📋 ${x.sip}kg | 💵 ${x.tah}₺</small><button class="item-del" onclick="del('satislar','${id}')">Sil</button></div>`);
+        s.forEach(([id,x]) => h += `<div class="item">${x.mus}<br><small>📦 ${x.sat}kg | 📋 ${x.sip}kg | 💵 ${x.tah}₺</small><button class="item-del" onclick="del('sat','${id}')">Sil</button></div>`);
       }
 
       if (tab === 'gid') {
         h += `<button class="btn-add" onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Gider Ekle</button><div id="fgid" class="form hidden"><select id="gkat"><option>Kategori</option><option>Elektrik</option><option>Su</option><option>Kira</option><option>Malzeme</option><option>Diğer</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar (₺)"><button onclick="add_gid()">Kaydet</button></div>`;
-        g.forEach(([id,x]) => h += `<div class="item">${x.aç}<br><small>📂 ${x.kat} | 💰 ${x.tur}₺</small><button class="item-del" onclick="del('giderler','${id}')">Sil</button></div>`);
+        g.forEach(([id,x]) => h += `<div class="item">${x.aç}<br><small>📂 ${x.kat} | 💰 ${x.tur}₺</small><button class="item-del" onclick="del('gid','${id}')">Sil</button></div>`);
       }
 
       h += `<button class="logout-btn" onclick="logout()">Çıkış</button></div>`;
       document.getElementById('app').innerHTML = h;
     }
 
-    check_auth();
+    show();
   </script>
 </body>
 </html>
