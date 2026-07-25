@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim - Google Drive</title>
-  <script src="https://apis.google.com/js/api.js"></script>
+  <title>📊 İş Yönetim - Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
@@ -35,62 +35,48 @@
   <div id="app"></div>
 
   <script>
-    const CLIENT_ID = '8261571739-hf3ptbkhbik4ak5cumops.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+    const SUPABASE_URL = 'https://eifoihvbfnbgzireabqm.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_BQAV8fLpW9rjSSDYcr7-lQ_uHOvjxSO';
     
-    let users = JSON.parse(localStorage.getItem('users')) || {};
-    let current = localStorage.getItem('current');
+    const { createClient } = window.supabase;
+    const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    let current_user = null;
     let tab = 'dash';
-    let gapi_loaded = false;
+    let app_data = { musteriler: {}, satislar: {}, giderler: {} };
 
-    window.onload = () => {
-      gapi.load('client:auth2', init_gapi);
-    };
-
-    function init_gapi() {
-      gapi.client.init({
-        clientId: CLIENT_ID,
-        scope: SCOPES
-      }).then(() => {
-        gapi_loaded = true;
-        show();
-      }).catch(e => {
-        console.log('GAPI Error:', e);
-        show();
-      });
+    async function check_auth() {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        current_user = data.session.user.email;
+        load_data();
+      } else {
+        show_login();
+      }
     }
 
-    function getData() {
-      return JSON.parse(localStorage.getItem('app_' + current)) || { mus: {}, sat: {}, gid: {} };
-    }
-
-    function save(d) {
-      localStorage.setItem('app_' + current, JSON.stringify(d));
-      if(gapi_loaded) save_to_drive(d);
+    async function load_data() {
+      const { data } = await supabase.from('app_data').select('*').eq('user_email', current_user);
+      if (data && data.length > 0) {
+        app_data = JSON.parse(data[0].data);
+      } else {
+        app_data = { musteriler: {}, satislar: {}, giderler: {} };
+      }
       show();
     }
 
-    function save_to_drive(d) {
-      const user = users[current];
-      const content = new Blob([JSON.stringify(d)], { type: 'application/json' });
-      const metadata = {
-        name: current + '_data.json',
-        mimeType: 'application/json'
-      };
-      const form = new FormData();
-      form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-      form.append('file', content);
-
-      fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + gapi.auth2.getAuthInstance().currentUser.get().getAuthResponse().id_token
-        },
-        body: form
-      }).catch(e => console.log('Drive save error:', e));
+    async function save_data() {
+      const { data } = await supabase.from('app_data').select('id').eq('user_email', current_user).single();
+      
+      if (data) {
+        await supabase.from('app_data').update({ data: JSON.stringify(app_data) }).eq('id', data.id);
+      } else {
+        await supabase.from('app_data').insert({ user_email: current_user, data_type: 'all', data: JSON.stringify(app_data) });
+      }
+      show();
     }
 
-    function showLogin() {
+    function show_login() {
       document.getElementById('app').innerHTML = `
         <div class="login-box">
           <h1 style="text-align: center; color: #1e40af; margin-bottom: 20px;">📊 İş Yönetim</h1>
@@ -103,7 +89,6 @@
           </div>
           <div id="signup" class="hidden">
             <h2>Hesap Oluştur</h2>
-            <input type="text" id="nm" placeholder="Adınız" class="login-input">
             <input type="email" id="se" placeholder="Email" class="login-input">
             <input type="password" id="sp" placeholder="Şifre" class="login-input">
             <button onclick="signup()" class="login-btn btn-success">Oluştur</button>
@@ -118,113 +103,96 @@
       document.getElementById('signup').classList.toggle('hidden');
     }
 
-    function login() {
+    async function login() {
       let e = document.getElementById('em').value;
       let p = document.getElementById('pw').value;
-      if(users[e] && users[e].pw === p) {
-        localStorage.setItem('current', e);
-        current = e;
-        show();
-      } else alert('Hatalı!');
+      const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
+      if (error) alert(error.message);
+      else { current_user = e; load_data(); }
     }
 
-    function signup() {
-      let n = document.getElementById('nm').value;
+    async function signup() {
       let e = document.getElementById('se').value;
       let p = document.getElementById('sp').value;
-      if(!n || !e || !p) { alert('Doldurun'); return; }
-      if(users[e]) { alert('Var'); return; }
-      users[e] = { nm: n, pw: p };
-      localStorage.setItem('users', JSON.stringify(users));
-      alert('Oldu!');
+      const { error } = await supabase.auth.signUp({ email: e, password: p });
+      if (error) alert(error.message);
+      else alert('Hesap oluşturuldu! Giriş yapabilirsiniz.');
       tog();
     }
 
-    function addMus() {
+    function add_mus() {
       let isim = document.getElementById('misim').value;
       let soy = document.getElementById('msoy').value;
-      if(!isim || !soy) { alert('Doldur'); return; }
-      let d = getData();
-      d.mus['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
-      save(d);
-      document.getElementById('misim').value = '';
-      document.getElementById('msoy').value = '';
+      if (!isim || !soy) { alert('Doldur'); return; }
+      app_data.musteriler['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
+      save_data();
     }
 
-    function addSat() {
+    function add_sat() {
       let mus = document.getElementById('smus').value;
-      if(!mus) { alert('Müşteri'); return; }
-      let d = getData();
-      d.sat['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0, sip: parseFloat(document.getElementById('ssip').value) || 0, tah: parseFloat(document.getElementById('stah').value) || 0 };
-      save(d);
-      document.getElementById('smus').value = '';
+      if (!mus) { alert('Müşteri'); return; }
+      app_data.satislar['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0, sip: parseFloat(document.getElementById('ssip').value) || 0, tah: parseFloat(document.getElementById('stah').value) || 0 };
+      save_data();
     }
 
-    function addGid() {
+    function add_gid() {
       let kat = document.getElementById('gkat').value;
       let aç = document.getElementById('gaç').value;
-      if(!kat || !aç) { alert('Doldur'); return; }
-      let d = getData();
-      d.gid['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
-      save(d);
-      document.getElementById('gkat').value = '';
-      document.getElementById('gaç').value = '';
+      if (!kat || !aç) { alert('Doldur'); return; }
+      app_data.giderler['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
+      save_data();
     }
 
     function del(tip, id) {
-      if(!confirm('Sil?')) return;
-      let d = getData();
-      delete d[tip][id];
-      save(d);
+      if (!confirm('Sil?')) return;
+      delete app_data[tip][id];
+      save_data();
     }
 
-    function logout() {
-      localStorage.removeItem('current');
-      current = null;
-      tab = 'dash';
-      showLogin();
+    async function logout() {
+      await supabase.auth.signOut();
+      current_user = null;
+      show_login();
     }
 
     function show() {
-      if(!current) { showLogin(); return; }
-      let d = getData();
-      let u = users[current];
-      let m = Object.entries(d.mus);
-      let s = Object.entries(d.sat);
-      let g = Object.entries(d.gid);
+      if (!current_user) { show_login(); return; }
+      let m = Object.entries(app_data.musteriler);
+      let s = Object.entries(app_data.satislar);
+      let g = Object.entries(app_data.giderler);
       let tsat = s.reduce((a,b) => a + (b[1].sat || 0), 0);
       let tsip = s.reduce((a,b) => a + (b[1].sip || 0), 0);
       let ttah = s.reduce((a,b) => a + (b[1].tah || 0), 0);
       let tgid = g.reduce((a,b) => a + (b[1].tur || 0), 0);
 
-      let h = `<div class="header"><h1>📊 İş Yönetim</h1><p>👤 ${u.nm}</p></div>`;
+      let h = `<div class="header"><h1>📊 İş Yönetim</h1><p>📧 ${current_user}</p></div>`;
       h += `<div class="tabs"><div class="tab ${tab === 'dash' ? 'active' : ''}" onclick="tab='dash'; show();">📊</div><div class="tab ${tab === 'mus' ? 'active' : ''}" onclick="tab='mus'; show();">👥</div><div class="tab ${tab === 'sat' ? 'active' : ''}" onclick="tab='sat'; show();">📝</div><div class="tab ${tab === 'gid' ? 'active' : ''}" onclick="tab='gid'; show();">💰</div></div>`;
       h += `<div class="container">`;
 
-      if(tab === 'dash') {
+      if (tab === 'dash') {
         h += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"><div class="stat"><div style="font-size:12px;">📦 Satılan</div><div class="stat-val">${tsat}</div></div><div class="stat"><div style="font-size:12px;">📋 Sipariş</div><div class="stat-val">${tsip}</div></div><div class="stat"><div style="font-size:12px;">💵 Tahsil</div><div class="stat-val">${ttah}</div></div><div class="stat"><div style="font-size:12px;">📊 Giderler</div><div class="stat-val">${tgid}</div></div></div>`;
       }
 
-      if(tab === 'mus') {
-        h += `<button class="btn-add" onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Müşteri Ekle</button><div id="fmus" class="form hidden"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><input type="text" id="mshr" placeholder="Şehir"><button onclick="addMus()">Kaydet</button></div>`;
-        m.forEach(([id,x]) => h += `<div class="item">${x.isim} ${x.soy}<br><small>📱 ${x.tel} | 🏙️ ${x.shr}</small><button class="item-del" onclick="del('mus','${id}')">Sil</button></div>`);
+      if (tab === 'mus') {
+        h += `<button class="btn-add" onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Müşteri Ekle</button><div id="fmus" class="form hidden"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><input type="text" id="mshr" placeholder="Şehir"><button onclick="add_mus()">Kaydet</button></div>`;
+        m.forEach(([id,x]) => h += `<div class="item">${x.isim} ${x.soy}<br><small>📱 ${x.tel} | 🏙️ ${x.shr}</small><button class="item-del" onclick="del('musteriler','${id}')">Sil</button></div>`);
       }
 
-      if(tab === 'sat') {
-        h += `<button class="btn-add" onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Satış Ekle</button><div id="fsat" class="form hidden"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><input type="number" id="ssip" placeholder="Sipariş (kg)"><input type="number" id="stah" placeholder="Tahsil (₺)"><button onclick="addSat()">Kaydet</button></div>`;
-        s.forEach(([id,x]) => h += `<div class="item">${x.mus}<br><small>📦 ${x.sat}kg | 📋 ${x.sip}kg | 💵 ${x.tah}₺</small><button class="item-del" onclick="del('sat','${id}')">Sil</button></div>`);
+      if (tab === 'sat') {
+        h += `<button class="btn-add" onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Satış Ekle</button><div id="fsat" class="form hidden"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><input type="number" id="ssip" placeholder="Sipariş (kg)"><input type="number" id="stah" placeholder="Tahsil (₺)"><button onclick="add_sat()">Kaydet</button></div>`;
+        s.forEach(([id,x]) => h += `<div class="item">${x.mus}<br><small>📦 ${x.sat}kg | 📋 ${x.sip}kg | 💵 ${x.tah}₺</small><button class="item-del" onclick="del('satislar','${id}')">Sil</button></div>`);
       }
 
-      if(tab === 'gid') {
-        h += `<button class="btn-add" onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Gider Ekle</button><div id="fgid" class="form hidden"><select id="gkat"><option>Kategori</option><option>Elektrik</option><option>Su</option><option>Kira</option><option>Malzeme</option><option>Diğer</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar (₺)"><button onclick="addGid()">Kaydet</button></div>`;
-        g.forEach(([id,x]) => h += `<div class="item">${x.aç}<br><small>📂 ${x.kat} | 💰 ${x.tur}₺</small><button class="item-del" onclick="del('gid','${id}')">Sil</button></div>`);
+      if (tab === 'gid') {
+        h += `<button class="btn-add" onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Gider Ekle</button><div id="fgid" class="form hidden"><select id="gkat"><option>Kategori</option><option>Elektrik</option><option>Su</option><option>Kira</option><option>Malzeme</option><option>Diğer</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar (₺)"><button onclick="add_gid()">Kaydet</button></div>`;
+        g.forEach(([id,x]) => h += `<div class="item">${x.aç}<br><small>📂 ${x.kat} | 💰 ${x.tur}₺</small><button class="item-del" onclick="del('giderler','${id}')">Sil</button></div>`);
       }
 
       h += `<button class="logout-btn" onclick="logout()">Çıkış</button></div>`;
       document.getElementById('app').innerHTML = h;
     }
 
-    show();
+    check_auth();
   </script>
 </body>
 </html>
