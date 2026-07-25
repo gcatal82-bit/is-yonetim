@@ -1,195 +1,161 @@
 <!DOCTYPE html>
-<html lang="tr">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: Arial; background: #f5f5f5; padding-bottom: 80px; }
-    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; }
-    .header h1 { font-size: 24px; }
-    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #ddd; }
-    .tab { padding: 12px; text-align: center; cursor: pointer; font-size: 20px; }
-    .tab.active { background: #1e40af; color: white; }
-    .container { max-width: 600px; margin: 0 auto; padding: 15px; }
-    .stat { background: white; padding: 15px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #1e40af; text-align: center; }
-    .stat-val { font-size: 18px; font-weight: bold; color: #1e40af; }
-    .btn-add { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; }
-    .form { background: white; padding: 15px; border-radius: 6px; margin-bottom: 15px; }
-    input, select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; }
-    .form button { width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-    .item { background: white; padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #0ea5e9; }
-    .item-del { float: right; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
-    .sync-btn { width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; }
-    .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; }
-    .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 8px; }
-    .login-input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
-    .login-btn { width: 100%; padding: 10px; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; font-weight: 600; }
-    .hidden { display: none; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>📊 İş Yönetim</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial;background:#f5f5f5;padding:10px;}
+.header{background:#1e40af;color:white;padding:15px;text-align:center;border-radius:8px;margin-bottom:15px;}
+.header h1{font-size:22px;}
+.tabs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:15px;}
+.tab{padding:10px;background:white;border:2px solid #ddd;cursor:pointer;text-align:center;font-size:18px;}
+.tab.active{background:#1e40af;color:white;}
+.container{max-width:600px;margin:0 auto;}
+input,select{width:100%;padding:8px;margin:5px 0;border:1px solid #ddd;border-radius:4px;}
+button{width:100%;padding:10px;background:#1e40af;color:white;border:none;cursor:pointer;margin:5px 0;border-radius:4px;font-weight:600;}
+.item{background:white;padding:10px;margin:5px 0;border-left:4px solid #0ea5e9;border-radius:4px;}
+.del{background:#dc2626;width:60px;float:right;}
+.logout{background:#dc2626;margin-top:20px;}
+.login{max-width:400px;margin:50px auto;background:white;padding:25px;border-radius:8px;}
+.hidden{display:none;}
+</style>
 </head>
 <body>
-  <div id="app"></div>
-  <script>
-    let users = JSON.parse(localStorage.getItem('users')) || {};
-    let current = localStorage.getItem('current');
-    let tab = 'dash';
+<div id="app"></div>
+<script>
+let users = JSON.parse(localStorage.getItem('users'))||{};
+let current = localStorage.getItem('current');
+let tab = 'dash';
 
-    function getData() {
-      return JSON.parse(localStorage.getItem('app_' + current)) || { mus: {}, sat: {}, gid: {} };
-    }
+function getData(){
+return JSON.parse(localStorage.getItem('data_'+current))||{mus:[],sat:[],gid:[]};
+}
 
-    function save(d) {
-      localStorage.setItem('app_' + current, JSON.stringify(d));
-      show();
-    }
+function save(d){
+localStorage.setItem('data_'+current,JSON.stringify(d));
+show();
+}
 
-    function showLogin() {
-      document.getElementById('app').innerHTML = `
-        <div class="login-box">
-          <h1 style="text-align: center; color: #1e40af; margin-bottom: 20px;">📊 İş Yönetim</h1>
-          <div id="login">
-            <h2>Giriş Yap</h2>
-            <input type="email" id="em" placeholder="Email" class="login-input">
-            <input type="password" id="pw" placeholder="Şifre" class="login-input">
-            <button onclick="login()" class="login-btn" style="background: #1e40af; color: white;">Giriş Yap</button>
-            <button onclick="tog()" class="login-btn" style="background: #059669; color: white;">Hesap Oluştur</button>
-          </div>
-          <div id="signup" class="hidden">
-            <h2>Hesap Oluştur</h2>
-            <input type="email" id="se" placeholder="Email" class="login-input">
-            <input type="password" id="sp" placeholder="Şifre" class="login-input">
-            <button onclick="signup()" class="login-btn" style="background: #059669; color: white;">Oluştur</button>
-            <button onclick="tog()" class="login-btn" style="background: #666; color: white;">Geri</button>
-          </div>
-        </div>
-      `;
-    }
+function showLogin(){
+document.getElementById('app').innerHTML=`
+<div class="login">
+<h1 style="text-align:center;color:#1e40af;margin-bottom:20px;">📊 İş Yönetim</h1>
+<div id="login">
+<input type="email" id="em" placeholder="Email">
+<input type="password" id="pw" placeholder="Şifre">
+<button onclick="login()">Giriş</button>
+<button onclick="tog()" style="background:#059669;">Hesap Oluştur</button>
+</div>
+<div id="signup" class="hidden">
+<input type="email" id="se" placeholder="Email">
+<input type="password" id="sp" placeholder="Şifre">
+<button onclick="signup()" style="background:#059669;">Oluştur</button>
+<button onclick="tog()" style="background:#666;">Geri</button>
+</div>
+</div>
+`;
+}
 
-    function tog() {
-      document.getElementById('login').classList.toggle('hidden');
-      document.getElementById('signup').classList.toggle('hidden');
-    }
+function tog(){
+document.getElementById('login').classList.toggle('hidden');
+document.getElementById('signup').classList.toggle('hidden');
+}
 
-    function login() {
-      let e = document.getElementById('em').value;
-      let p = document.getElementById('pw').value;
-      if (users[e] && users[e].pw === p) {
-        localStorage.setItem('current', e);
-        current = e;
-        show();
-      } else alert('Hatalı!');
-    }
+function login(){
+let e=document.getElementById('em').value;
+let p=document.getElementById('pw').value;
+if(users[e]&&users[e].pw===p){localStorage.setItem('current',e);current=e;show();}else alert('Hatalı!');
+}
 
-    function signup() {
-      let e = document.getElementById('se').value;
-      let p = document.getElementById('sp').value;
-      if (!e || !p) { alert('Doldurun'); return; }
-      if (users[e]) { alert('Var'); return; }
-      users[e] = { pw: p };
-      localStorage.setItem('users', JSON.stringify(users));
-      alert('Oldu!');
-      tog();
-    }
+function signup(){
+let e=document.getElementById('se').value;
+let p=document.getElementById('sp').value;
+if(!e||!p){alert('Doldur');return;}
+if(users[e]){alert('Var');return;}
+users[e]={pw:p};
+localStorage.setItem('users',JSON.stringify(users));
+alert('Oldu!');
+tog();
+}
 
-    function add_mus() {
-      let isim = document.getElementById('misim').value;
-      let soy = document.getElementById('msoy').value;
-      if (!isim || !soy) { alert('Doldur'); return; }
-      let d = getData();
-      d.mus['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
-      save(d);
-      document.getElementById('misim').value = '';
-    }
+function add_mus(){
+let isim=document.getElementById('misim').value;
+let soy=document.getElementById('msoy').value;
+if(!isim||!soy){alert('Doldur');return;}
+let d=getData();
+d.mus.push({isim,soy,tel:document.getElementById('mtel').value});
+save(d);
+document.getElementById('misim').value='';
+}
 
-    function add_sat() {
-      let mus = document.getElementById('smus').value;
-      if (!mus) { alert('Müşteri'); return; }
-      let d = getData();
-      d.sat['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0 };
-      save(d);
-      document.getElementById('smus').value = '';
-    }
+function add_sat(){
+let mus=document.getElementById('smus').value;
+let sat=parseFloat(document.getElementById('ssat').value)||0;
+if(!mus){alert('Müşteri');return;}
+let d=getData();
+d.sat.push({mus,sat});
+save(d);
+document.getElementById('smus').value='';
+}
 
-    function add_gid() {
-      let kat = document.getElementById('gkat').value;
-      let aç = document.getElementById('gaç').value;
-      if (!kat || !aç) { alert('Doldur'); return; }
-      let d = getData();
-      d.gid['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
-      save(d);
-      document.getElementById('gkat').value = '';
-    }
+function add_gid(){
+let kat=document.getElementById('gkat').value;
+let aç=document.getElementById('gaç').value;
+if(!kat||!aç){alert('Doldur');return;}
+let d=getData();
+d.gid.push({kat,aç,tur:parseFloat(document.getElementById('gtur').value)||0});
+save(d);
+document.getElementById('gkat').value='';
+}
 
-    function del(tip, id) {
-      if (!confirm('Sil?')) return;
-      let d = getData();
-      delete d[tip][id];
-      save(d);
-    }
+function del(tip,idx){
+if(!confirm('Sil?'))return;
+let d=getData();
+d[tip].splice(idx,1);
+save(d);
+}
 
-    function exportData() {
-      let d = getData();
-      let code = btoa(JSON.stringify(d));
-      alert('KOD:\n' + code);
-    }
+function logout(){
+localStorage.removeItem('current');
+current=null;
+showLogin();
+}
 
-    function importData() {
-      let code = prompt('Kodu yapıştır:');
-      if (!code) return;
-      try {
-        let d = JSON.parse(atob(code));
-        localStorage.setItem('app_' + current, JSON.stringify(d));
-        alert('Yüklendi!');
-        show();
-      } catch {
-        alert('Hata!');
-      }
-    }
+function show(){
+if(!current){showLogin();return;}
+let d=getData();
+let tsat=d.sat.reduce((a,b)=>a+b.sat,0);
 
-    function logout() {
-      localStorage.removeItem('current');
-      current = null;
-      showLogin();
-    }
+let h=`<div class="header"><h1>📊 İş Yönetim</h1><p>📧 ${current}</p></div>`;
+h+=`<div class="tabs"><div class="tab ${tab==='dash'?'active':''}" onclick="tab='dash';show();">📊</div><div class="tab ${tab==='mus'?'active':''}" onclick="tab='mus';show();">👥</div><div class="tab ${tab==='sat'?'active':''}" onclick="tab='sat';show();">📝</div><div class="tab ${tab==='gid'?'active':''}" onclick="tab='gid';show();">💰</div></div>`;
+h+=`<div class="container">`;
 
-    function show() {
-      if (!current) { showLogin(); return; }
-      let d = getData();
-      let m = Object.entries(d.mus);
-      let s = Object.entries(d.sat);
-      let g = Object.entries(d.gid);
-      let tsat = s.reduce((a,b) => a + (b[1].sat || 0), 0);
+if(tab==='dash'){
+h+=`<div style="background:white;padding:15px;margin:10px 0;border-radius:8px;text-align:center;"><div style="font-size:12px;color:#888;">📦 Satılan</div><div style="font-size:24px;font-weight:bold;color:#1e40af;">${tsat}</div></div>`;
+}
 
-      let h = `<div class="header"><h1>📊 İş Yönetim</h1><p>📧 ${current}</p></div>`;
-      h += `<div class="tabs"><div class="tab ${tab === 'dash' ? 'active' : ''}" onclick="tab='dash'; show();">📊</div><div class="tab ${tab === 'mus' ? 'active' : ''}" onclick="tab='mus'; show();">👥</div><div class="tab ${tab === 'sat' ? 'active' : ''}" onclick="tab='sat'; show();">📝</div><div class="tab ${tab === 'gid' ? 'active' : ''}" onclick="tab='gid'; show();">💰</div></div>`;
-      h += `<div class="container">`;
+if(tab==='mus'){
+h+=`<button onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Ekle</button><div id="fmus" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><button onclick="add_mus()">Kaydet</button></div>`;
+d.mus.forEach((x,i)=>h+=`<div class="item">${x.isim} ${x.soy} <button class="del" onclick="del('mus',${i})">Sil</button></div>`);
+}
 
-      if (tab === 'dash') {
-        h += `<button class="sync-btn" onclick="exportData();">📤 Verileri Gönder</button><button class="sync-btn" onclick="importData();">📥 Verileri Al</button><div class="stat"><div style="font-size:12px;">📦 Satılan</div><div class="stat-val">${tsat}</div></div>`;
-      }
+if(tab==='sat'){
+h+=`<button onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Ekle</button><div id="fsat" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><button onclick="add_sat()">Kaydet</button></div>`;
+d.sat.forEach((x,i)=>h+=`<div class="item">${x.mus}: ${x.sat}kg <button class="del" onclick="del('sat',${i})">Sil</button></div>`);
+}
 
-      if (tab === 'mus') {
-        h += `<button class="btn-add" onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Ekle</button><div id="fmus" class="form hidden"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><input type="text" id="mshr" placeholder="Şehir"><button onclick="add_mus()">Kaydet</button></div>`;
-        m.forEach(([id,x]) => h += `<div class="item">${x.isim} ${x.soy}<button class="item-del" onclick="del('mus','${id}')">Sil</button></div>`);
-      }
+if(tab==='gid'){
+h+=`<button onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Ekle</button><div id="fgid" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><select id="gkat"><option>Elektrik</option><option>Su</option><option>Kira</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar"><button onclick="add_gid()">Kaydet</button></div>`;
+d.gid.forEach((x,i)=>h+=`<div class="item">${x.aç}: ${x.tur}₺ <button class="del" onclick="del('gid',${i})">Sil</button></div>`);
+}
 
-      if (tab === 'sat') {
-        h += `<button class="btn-add" onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Ekle</button><div id="fsat" class="form hidden"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><button onclick="add_sat()">Kaydet</button></div>`;
-        s.forEach(([id,x]) => h += `<div class="item">${x.mus}: ${x.sat}kg<button class="item-del" onclick="del('sat','${id}')">Sil</button></div>`);
-      }
+h+=`<button class="logout" onclick="logout()">Çıkış</button></div>`;
+document.getElementById('app').innerHTML=h;
+}
 
-      if (tab === 'gid') {
-        h += `<button class="btn-add" onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Ekle</button><div id="fgid" class="form hidden"><select id="gkat"><option>Elektrik</option><option>Su</option><option>Kira</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar"><button onclick="add_gid()">Kaydet</button></div>`;
-        g.forEach(([id,x]) => h += `<div class="item">${x.aç}: ${x.tur}₺<button class="item-del" onclick="del('gid','${id}')">Sil</button></div>`);
-      }
-
-      h += `<button class="logout-btn" onclick="logout()">Çıkış</button></div>`;
-      document.getElementById('app').innerHTML = h;
-    }
-
-    show();
-  </script>
+show();
+</script>
 </body>
 </html>
