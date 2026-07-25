@@ -3,45 +3,61 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>📊 İş Yönetim</title>
+<title>📊 İş Yönetim - Otomatik</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial;background:#f5f5f5;padding:10px;}
-.header{background:#1e40af;color:white;padding:15px;text-align:center;border-radius:8px;margin-bottom:15px;}
+.header{background:#1e40af;color:white;padding:15px;text-align:center;margin-bottom:15px;}
 .header h1{font-size:22px;}
 .tabs{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px;margin-bottom:15px;}
-.tab{padding:10px;background:white;border:2px solid #ddd;cursor:pointer;text-align:center;font-size:18px;}
+.tab{padding:10px;background:white;border:2px solid #ddd;cursor:pointer;font-size:18px;}
 .tab.active{background:#1e40af;color:white;}
-.container{max-width:600px;margin:0 auto;}
-input,select{width:100%;padding:8px;margin:5px 0;border:1px solid #ddd;border-radius:4px;}
-button{width:100%;padding:10px;background:#1e40af;color:white;border:none;cursor:pointer;margin:5px 0;border-radius:4px;font-weight:600;}
-.item{background:white;padding:10px;margin:5px 0;border-left:4px solid #0ea5e9;border-radius:4px;}
+input,select{width:100%;padding:8px;margin:5px 0;border:1px solid #ddd;}
+button{width:100%;padding:10px;background:#1e40af;color:white;border:none;cursor:pointer;margin:5px 0;}
+.item{background:white;padding:10px;margin:5px 0;border-left:4px solid #0ea5e9;}
 .del{background:#dc2626;width:60px;float:right;}
 .logout{background:#dc2626;margin-top:20px;}
-.login{max-width:400px;margin:50px auto;background:white;padding:25px;border-radius:8px;}
+.login{max-width:400px;margin:50px auto;background:white;padding:25px;}
 .hidden{display:none;}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app">⏳ Yükleniyor...</div>
 <script>
-let users = JSON.parse(localStorage.getItem('users'))||{};
+const firebaseConfig = {
+  apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
+  authDomain: "is-yonetim-2551c.firebaseapp.com",
+  databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "is-yonetim-2551c"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
 let current = localStorage.getItem('current');
 let tab = 'dash';
 
 function getData(){
-return JSON.parse(localStorage.getItem('data_'+current))||{mus:[],sat:[],gid:[]};
+return {mus:[],sat:[],gid:[]};
 }
 
-function save(d){
-localStorage.setItem('data_'+current,JSON.stringify(d));
-show();
+function saveDB(email,d){
+db.ref('users/'+email.replace(/[^a-z0-9]/g,'')).set(d).catch(e=>console.log('Save error:',e));
+}
+
+function loadDB(email,callback){
+db.ref('users/'+email.replace(/[^a-z0-9]/g,'')).on('value',snapshot=>{
+let d = snapshot.val() || getData();
+callback(d);
+});
 }
 
 function showLogin(){
 document.getElementById('app').innerHTML=`
 <div class="login">
-<h1 style="text-align:center;color:#1e40af;margin-bottom:20px;">📊 İş Yönetim</h1>
+<h1 style="text-align:center;color:#1e40af;margin-bottom:20px;">📊 İş Yönetim ☁️</h1>
 <div id="login">
 <input type="email" id="em" placeholder="Email">
 <input type="password" id="pw" placeholder="Şifre">
@@ -66,55 +82,60 @@ document.getElementById('signup').classList.toggle('hidden');
 function login(){
 let e=document.getElementById('em').value;
 let p=document.getElementById('pw').value;
-if(users[e]&&users[e].pw===p){localStorage.setItem('current',e);current=e;show();}else alert('Hatalı!');
+if(!e||!p){alert('Doldurun');return;}
+let users = JSON.parse(localStorage.getItem('users'))||{};
+if(users[e]&&users[e].pw===p){
+localStorage.setItem('current',e);
+current=e;
+show();
+}else alert('Hatalı!');
 }
 
 function signup(){
 let e=document.getElementById('se').value;
 let p=document.getElementById('sp').value;
-if(!e||!p){alert('Doldur');return;}
+if(!e||!p){alert('Doldurun');return;}
+let users = JSON.parse(localStorage.getItem('users'))||{};
 if(users[e]){alert('Var');return;}
 users[e]={pw:p};
 localStorage.setItem('users',JSON.stringify(users));
+localStorage.setItem('current',e);
+current=e;
+saveDB(e,getData());
 alert('Oldu!');
-tog();
+show();
 }
 
-function add_mus(){
+function add_mus(d,email){
 let isim=document.getElementById('misim').value;
 let soy=document.getElementById('msoy').value;
 if(!isim||!soy){alert('Doldur');return;}
-let d=getData();
 d.mus.push({isim,soy,tel:document.getElementById('mtel').value});
-save(d);
+saveDB(email,d);
 document.getElementById('misim').value='';
 }
 
-function add_sat(){
+function add_sat(d,email){
 let mus=document.getElementById('smus').value;
 let sat=parseFloat(document.getElementById('ssat').value)||0;
 if(!mus){alert('Müşteri');return;}
-let d=getData();
 d.sat.push({mus,sat});
-save(d);
+saveDB(email,d);
 document.getElementById('smus').value='';
 }
 
-function add_gid(){
+function add_gid(d,email){
 let kat=document.getElementById('gkat').value;
 let aç=document.getElementById('gaç').value;
 if(!kat||!aç){alert('Doldur');return;}
-let d=getData();
 d.gid.push({kat,aç,tur:parseFloat(document.getElementById('gtur').value)||0});
-save(d);
+saveDB(email,d);
 document.getElementById('gkat').value='';
 }
 
-function del(tip,idx){
-if(!confirm('Sil?'))return;
-let d=getData();
+function del(d,email,tip,idx){
 d[tip].splice(idx,1);
-save(d);
+saveDB(email,d);
 }
 
 function logout(){
@@ -125,34 +146,36 @@ showLogin();
 
 function show(){
 if(!current){showLogin();return;}
-let d=getData();
+loadDB(current,function(d){
 let tsat=d.sat.reduce((a,b)=>a+b.sat,0);
 
-let h=`<div class="header"><h1>📊 İş Yönetim</h1><p>📧 ${current}</p></div>`;
+let h=`<div class="header"><h1>📊 İş Yönetim</h1><p>☁️ ${current}</p></div>`;
 h+=`<div class="tabs"><div class="tab ${tab==='dash'?'active':''}" onclick="tab='dash';show();">📊</div><div class="tab ${tab==='mus'?'active':''}" onclick="tab='mus';show();">👥</div><div class="tab ${tab==='sat'?'active':''}" onclick="tab='sat';show();">📝</div><div class="tab ${tab==='gid'?'active':''}" onclick="tab='gid';show();">💰</div></div>`;
-h+=`<div class="container">`;
+h+=`<div style="max-width:600px;margin:0 auto;">`;
 
 if(tab==='dash'){
-h+=`<div style="background:white;padding:15px;margin:10px 0;border-radius:8px;text-align:center;"><div style="font-size:12px;color:#888;">📦 Satılan</div><div style="font-size:24px;font-weight:bold;color:#1e40af;">${tsat}</div></div>`;
+h+=`<div style="background:white;padding:15px;margin:10px 0;text-align:center;"><div style="font-size:12px;">📦 Satılan</div><div style="font-size:24px;font-weight:bold;color:#1e40af;">${tsat}</div></div>`;
 }
 
 if(tab==='mus'){
-h+=`<button onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Ekle</button><div id="fmus" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><button onclick="add_mus()">Kaydet</button></div>`;
-d.mus.forEach((x,i)=>h+=`<div class="item">${x.isim} ${x.soy} <button class="del" onclick="del('mus',${i})">Sil</button></div>`);
+h+=`<button onclick="document.getElementById('fmus').classList.toggle('hidden');">➕ Ekle</button><div id="fmus" class="hidden" style="background:white;padding:15px;margin:10px 0;"><input type="text" id="misim" placeholder="İsim"><input type="text" id="msoy" placeholder="Soyisim"><input type="tel" id="mtel" placeholder="Telefon"><button onclick="add_mus(window.currentData,'${current}')">Kaydet</button></div>`;
+d.mus.forEach((x,i)=>h+=`<div class="item">${x.isim} ${x.soy} <button class="del" onclick="del(window.currentData,'${current}','mus',${i})">Sil</button></div>`);
 }
 
 if(tab==='sat'){
-h+=`<button onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Ekle</button><div id="fsat" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan (kg)"><button onclick="add_sat()">Kaydet</button></div>`;
-d.sat.forEach((x,i)=>h+=`<div class="item">${x.mus}: ${x.sat}kg <button class="del" onclick="del('sat',${i})">Sil</button></div>`);
+h+=`<button onclick="document.getElementById('fsat').classList.toggle('hidden');">➕ Ekle</button><div id="fsat" class="hidden" style="background:white;padding:15px;margin:10px 0;"><input type="text" id="smus" placeholder="Müşteri"><input type="number" id="ssat" placeholder="Satılan"><button onclick="add_sat(window.currentData,'${current}')">Kaydet</button></div>`;
+d.sat.forEach((x,i)=>h+=`<div class="item">${x.mus}: ${x.sat}kg <button class="del" onclick="del(window.currentData,'${current}','sat',${i})">Sil</button></div>`);
 }
 
 if(tab==='gid'){
-h+=`<button onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Ekle</button><div id="fgid" class="hidden" style="background:white;padding:15px;margin:10px 0;border-radius:8px;"><select id="gkat"><option>Elektrik</option><option>Su</option><option>Kira</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar"><button onclick="add_gid()">Kaydet</button></div>`;
-d.gid.forEach((x,i)=>h+=`<div class="item">${x.aç}: ${x.tur}₺ <button class="del" onclick="del('gid',${i})">Sil</button></div>`);
+h+=`<button onclick="document.getElementById('fgid').classList.toggle('hidden');">➕ Ekle</button><div id="fgid" class="hidden" style="background:white;padding:15px;margin:10px 0;"><select id="gkat"><option>Elektrik</option><option>Su</option><option>Kira</option></select><input type="text" id="gaç" placeholder="Açıklama"><input type="number" id="gtur" placeholder="Tutar"><button onclick="add_gid(window.currentData,'${current}')">Kaydet</button></div>`;
+d.gid.forEach((x,i)=>h+=`<div class="item">${x.aç}: ${x.tur}₺ <button class="del" onclick="del(window.currentData,'${current}','gid',${i})">Sil</button></div>`);
 }
 
 h+=`<button class="logout" onclick="logout()">Çıkış</button></div>`;
 document.getElementById('app').innerHTML=h;
+window.currentData=d;
+});
 }
 
 show();
