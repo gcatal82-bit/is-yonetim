@@ -3,35 +3,60 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim - Bulut</title>
+  <title>📊 İş Yönetim Sistemi - Bulut</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
-    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 20; }
+    
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
     .header h1 { font-size: 28px; margin-bottom: 5px; }
+    .header p { font-size: 13px; opacity: 0.9; }
+    
     .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #e5e7eb; position: sticky; top: 70px; z-index: 15; }
-    .tab { padding: 15px; text-align: center; cursor: pointer; font-size: 24px; border: none; background: white; }
+    .tab { padding: 15px; text-align: center; cursor: pointer; font-size: 24px; border: none; background: white; transition: all 0.2s; }
+    .tab:hover { background: #f0f0f0; }
     .tab.active { background: #1e40af; color: white; }
+    
     .container { max-width: 600px; margin: 0 auto; padding: 15px; }
-    .stat { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #1e40af; text-align: center; }
-    .stat-label { font-size: 12px; color: #888; }
-    .stat-value { font-size: 24px; font-weight: bold; color: #1e40af; }
-    .btn-add { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 15px; font-weight: 600; }
-    .form { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
-    .form input, .form select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; }
-    .form button { width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
-    .item { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #0ea5e9; position: relative; }
-    .item-title { font-weight: 600; margin-bottom: 5px; }
-    .item-info { font-size: 12px; color: #888; }
-    .item-delete { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
-    .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 20px; }
-    .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-    .login-input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
-    .login-btn { width: 100%; padding: 10px; margin: 10px 0; border: none; border-radius: 4px; cursor: pointer; font-weight: 600; }
-    .btn-primary { background: #1e40af; color: white; }
-    .btn-success { background: #059669; color: white; }
-    .btn-warning { background: #f59e0b; color: white; }
-    .link-btn { color: #1e40af; text-decoration: underline; background: none; padding: 0; cursor: pointer; }
+    
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat { background: white; padding: 15px; border-radius: 10px; border-left: 5px solid #1e40af; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .stat-label { font-size: 12px; color: #888; margin-bottom: 8px; font-weight: 500; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1e40af; }
+    
+    .btn-add { width: 100%; padding: 14px; background: #1e40af; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; margin-bottom: 15px; transition: all 0.2s; }
+    .btn-add:active { background: #1e3a8a; transform: scale(0.98); }
+    
+    .form { background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .form h3 { margin-bottom: 15px; color: #333; font-size: 16px; }
+    .form input, .form select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+    .form button { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 15px; font-weight: 600; }
+    
+    .item { background: white; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid #0ea5e9; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; }
+    .item-title { font-weight: 600; margin-bottom: 5px; font-size: 15px; }
+    .item-info { font-size: 12px; color: #888; line-height: 1.5; }
+    .item-delete { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    
+    .logout-btn { width: 100%; padding: 14px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; margin-top: 20px; }
+    
+    .login-container { max-width: 400px; margin: 60px auto; }
+    .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .login-header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 25px; border-radius: 12px 12px 0 0; text-align: center; margin: -30px -30px 25px -30px; }
+    .login-header h1 { font-size: 32px; margin-bottom: 5px; }
+    .login-header p { font-size: 13px; opacity: 0.9; }
+    
+    .login-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+    .login-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; margin: 10px 0; }
+    .btn-login { background: #1e40af; color: white; }
+    .btn-signup { background: #059669; color: white; }
+    .btn-reset { background: #f59e0b; color: white; }
+    .link-text { text-align: center; margin-top: 15px; }
+    .link-text a { color: #1e40af; text-decoration: none; cursor: pointer; font-weight: 600; }
+    .link-text a:hover { text-decoration: underline; }
+    
     .hidden { display: none !important; }
     .sync-badge { display: inline-block; background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
   </style>
@@ -40,102 +65,124 @@
   <div id="app"></div>
 
   <script>
-    // Supabase veya basit backend yerine localStorage kullanıyoruz
-    // 2 telefondan senkronize etmek için: aynı email/şifre ile giriş yapmaları yeterli
-    // Veriler cloud'a kaydedilecek (JSON sunucusu ile)
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
+      authDomain: "is-yonetim-2551c.firebaseapp.com",
+      databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "is-yonetim-2551c",
+      storageBucket: "is-yonetim-2551c.firebasestorage.app",
+      messagingSenderId: "692969462148",
+      appId: "1:692969462148:web:e0cd274b97d92e9d5565d1"
+    };
 
-    let users = JSON.parse(localStorage.getItem('users')) || {};
-    let currentUser = localStorage.getItem('currentUser');
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUser = null;
     let activeTab = 'dashboard';
+    let appData = { musteriler: {}, satislar: {}, giderler: {} };
 
-    // Supabase JSON API yerine localStorage sync
-    const API_URL = 'https://jsonbin.io/v3/b'; // Opsiyonel
-    const SYNC_KEY = 'is-yonetim-data';
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loadDataFromFirebase();
+      } else {
+        showLoginPage();
+      }
+    });
 
-    function getAppData() {
-      return JSON.parse(localStorage.getItem('app_' + currentUser)) || {
-        musteriler: {},
-        satislar: {},
-        giderler: {}
-      };
+    function loadDataFromFirebase() {
+      const uid = currentUser.uid;
+      
+      db.ref('musteriler/' + uid).on('value', snapshot => {
+        appData.musteriler = snapshot.val() || {};
+        render();
+      });
+      
+      db.ref('satislar/' + uid).on('value', snapshot => {
+        appData.satislar = snapshot.val() || {};
+        render();
+      });
+      
+      db.ref('giderler/' + uid).on('value', snapshot => {
+        appData.giderler = snapshot.val() || {};
+        render();
+      });
     }
 
-    function saveAppData(data) {
-      localStorage.setItem('app_' + currentUser, JSON.stringify(data));
-      syncToCloud(); // Cloud'a sync et
-      render();
-    }
-
-    function syncToCloud() {
-      // Basit sync: localStorage'den oku
-      // (gerçek sync için Supabase veya Firebase gerekli)
-    }
-
-    function showLogin() {
+    function showLoginPage() {
       document.getElementById('app').innerHTML = `
-        <div class="login-box">
-          <h1 style="text-align: center; color: #1e40af; margin-bottom: 20px;">📊 İş Yönetim Sistemi</h1>
-          <p style="text-align: center; color: #888; margin-bottom: 20px;">☁️ 2 Telefondan Senkronizasyon</p>
-          
-          <div id="login-section">
-            <h2 style="margin-bottom: 15px; font-size: 16px;">Giriş Yap</h2>
-            <input type="email" id="email" placeholder="Email" class="login-input">
-            <input type="password" id="password" placeholder="Şifre" class="login-input">
-            <button onclick="login()" class="login-btn btn-primary">Giriş Yap</button>
-            <button onclick="showSignup()" class="login-btn btn-success" style="margin-top: 20px;">Hesap Oluştur</button>
-            <button onclick="showReset()" class="login-btn btn-warning" style="margin-top: 10px;">Şifremi Unuttum</button>
-          </div>
+        <div class="login-container">
+          <div class="login-box">
+            <div class="login-header">
+              <h1>📊 İş Yönetim</h1>
+              <p>☁️ Bulut Senkronizasyon</p>
+            </div>
 
-          <div id="signup-section" class="hidden">
-            <h2 style="margin-bottom: 15px; font-size: 16px;">Hesap Oluştur</h2>
-            <input type="text" id="name" placeholder="Adınız" class="login-input">
-            <input type="email" id="signup-email" placeholder="Email" class="login-input">
-            <input type="password" id="signup-password" placeholder="Şifre" class="login-input">
-            <button onclick="signup()" class="login-btn btn-success">Oluştur</button>
-            <button onclick="showLogin()" class="login-btn" style="background: #666; color: white; margin-top: 10px;">Geri Dön</button>
-          </div>
+            <div id="login-form">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">Giriş Yap</h2>
+              <input type="email" id="email" placeholder="Email" class="login-input">
+              <input type="password" id="password" placeholder="Şifre" class="login-input">
+              <button onclick="login()" class="login-btn btn-login">Giriş Yap</button>
+              <div class="link-text">
+                <a onclick="showSignupForm()">Hesap Oluştur</a> | <a onclick="showResetForm()">Şifremi Unuttum</a>
+              </div>
+            </div>
 
-          <div id="reset-section" class="hidden">
-            <h2 style="margin-bottom: 15px; font-size: 16px;">🔑 Şifre Sıfırla</h2>
-            <input type="email" id="reset-email" placeholder="Email" class="login-input">
-            <input type="password" id="reset-password" placeholder="Yeni Şifre" class="login-input">
-            <button onclick="resetPassword()" class="login-btn btn-warning">Şifreyi Sıfırla</button>
-            <button onclick="showLogin()" class="login-btn" style="background: #666; color: white; margin-top: 10px;">Geri Dön</button>
+            <div id="signup-form" class="hidden">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">Hesap Oluştur</h2>
+              <input type="text" id="name" placeholder="Adınız" class="login-input">
+              <input type="email" id="signup-email" placeholder="Email" class="login-input">
+              <input type="password" id="signup-password" placeholder="Şifre" class="login-input">
+              <button onclick="signup()" class="login-btn btn-signup">Oluştur</button>
+              <div class="link-text">
+                <a onclick="showLoginForm()">Giriş Sayfasına Dön</a>
+              </div>
+            </div>
+
+            <div id="reset-form" class="hidden">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">🔑 Şifre Sıfırla</h2>
+              <input type="email" id="reset-email" placeholder="Email" class="login-input">
+              <input type="password" id="reset-password" placeholder="Yeni Şifre" class="login-input">
+              <button onclick="resetPassword()" class="login-btn btn-reset">Şifreyi Sıfırla</button>
+              <div class="link-text">
+                <a onclick="showLoginForm()">Giriş Sayfasına Dön</a>
+              </div>
+            </div>
           </div>
         </div>
       `;
     }
 
-    function showSignup() {
-      document.getElementById('login-section').classList.add('hidden');
-      document.getElementById('signup-section').classList.remove('hidden');
-      document.getElementById('reset-section').classList.add('hidden');
+    function showLoginForm() {
+      document.getElementById('login-form').classList.remove('hidden');
+      document.getElementById('signup-form').classList.add('hidden');
+      document.getElementById('reset-form').classList.add('hidden');
     }
 
-    function showReset() {
-      document.getElementById('login-section').classList.add('hidden');
-      document.getElementById('signup-section').classList.add('hidden');
-      document.getElementById('reset-section').classList.remove('hidden');
+    function showSignupForm() {
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('signup-form').classList.remove('hidden');
+      document.getElementById('reset-form').classList.add('hidden');
     }
 
-    function showLogin() {
-      document.getElementById('login-section').classList.remove('hidden');
-      document.getElementById('signup-section').classList.add('hidden');
-      document.getElementById('reset-section').classList.add('hidden');
+    function showResetForm() {
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('signup-form').classList.add('hidden');
+      document.getElementById('reset-form').classList.remove('hidden');
     }
 
     function login() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
       
-      if (users[email] && users[email].password === password) {
-        localStorage.setItem('currentUser', email);
-        currentUser = email;
-        activeTab = 'dashboard';
-        render();
-      } else {
-        alert('Email veya şifre yanlış!');
+      if (!email || !password) {
+        alert('Email ve şifre boş bırakılamaz!');
+        return;
       }
+
+      auth.signInWithEmailAndPassword(email, password).catch(e => alert(e.message));
     }
 
     function signup() {
@@ -148,33 +195,25 @@
         return;
       }
 
-      if (users[email]) {
-        alert('Bu email zaten kayıtlı!');
-      } else {
-        users[email] = {name, password};
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('✅ Hesap oluşturuldu! Giriş yapabilirsiniz.');
-        showLogin();
-      }
+      auth.createUserWithEmailAndPassword(email, password).then(() => {
+        db.ref('users/' + auth.currentUser.uid).set({name, email});
+        alert('✅ Hesap oluşturuldu!');
+        showLoginForm();
+      }).catch(e => alert(e.message));
     }
 
     function resetPassword() {
       const email = document.getElementById('reset-email').value;
-      const newPassword = document.getElementById('reset-password').value;
       
-      if (!email || !newPassword) {
-        alert('Email ve yeni şifre boş bırakılamaz!');
+      if (!email) {
+        alert('Email boş bırakılamaz!');
         return;
       }
 
-      if (users[email]) {
-        users[email].password = newPassword;
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('✅ Şifre sıfırlandı!');
-        showLogin();
-      } else {
-        alert('Bu email kayıtlı değil!');
-      }
+      auth.sendPasswordResetEmail(email).then(() => {
+        alert('✅ Şifre sıfırlama linki gönderildi! Email kontrol et.');
+        showLoginForm();
+      }).catch(e => alert(e.message));
     }
 
     function addMusteri() {
@@ -188,10 +227,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'mus_' + Date.now();
-      data.musteriler[id] = {isim, soyisim, telefon, sehir, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('musteriler/' + currentUser.uid + '/' + id).set({
+        isim, soyisim, telefon, sehir,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('musteri-isim').value = '';
       document.getElementById('musteri-soyisim').value = '';
@@ -211,10 +251,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'sat_' + Date.now();
-      data.satislar[id] = {musteri, satilan, siparis, tahsil, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('satislar/' + currentUser.uid + '/' + id).set({
+        musteri, satilan, siparis, tahsil,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('satis-musteri').value = '';
       document.getElementById('satis-satilan').value = '';
@@ -233,10 +274,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'gid_' + Date.now();
-      data.giderler[id] = {kategori, aciklama, tutar, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('giderler/' + currentUser.uid + '/' + id).set({
+        kategori, aciklama, tutar,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('gider-kategori').value = '';
       document.getElementById('gider-aciklama').value = '';
@@ -247,18 +289,14 @@
     function deleteItem(type, id) {
       if (!confirm('Silmek istediğinize emin misiniz?')) return;
       
-      const data = getAppData();
-      if (type === 'musteri') delete data.musteriler[id];
-      if (type === 'satis') delete data.satislar[id];
-      if (type === 'gider') delete data.giderler[id];
-      saveAppData(data);
+      if (type === 'musteri') db.ref('musteriler/' + currentUser.uid + '/' + id).remove();
+      if (type === 'satis') db.ref('satislar/' + currentUser.uid + '/' + id).remove();
+      if (type === 'gider') db.ref('giderler/' + currentUser.uid + '/' + id).remove();
     }
 
     function logout() {
-      localStorage.removeItem('currentUser');
-      currentUser = null;
+      auth.signOut();
       activeTab = 'dashboard';
-      showLogin();
     }
 
     function toggleForm(formId) {
@@ -268,16 +306,13 @@
 
     function render() {
       if (!currentUser) {
-        showLogin();
+        showLoginPage();
         return;
       }
 
-      const data = getAppData();
-      const user = users[currentUser];
-
-      const musteriArray = Object.entries(data.musteriler);
-      const satisArray = Object.entries(data.satislar);
-      const giderArray = Object.entries(data.giderler);
+      const musteriArray = Object.entries(appData.musteriler);
+      const satisArray = Object.entries(appData.satislar);
+      const giderArray = Object.entries(appData.giderler);
 
       const toplamSatilan = satisArray.reduce((a, b) => a + (b[1].satilan || 0), 0);
       const toplamSiparis = satisArray.reduce((a, b) => a + (b[1].siparis || 0), 0);
@@ -287,7 +322,7 @@
       let html = `
         <div class="header">
           <h1>📊 İş Yönetim Sistemi</h1>
-          <p>👤 ${user.name} <span class="sync-badge">☁️ SENKRON</span></p>
+          <p>📧 ${currentUser.email} <span class="sync-badge">☁️ SENKRON</span></p>
         </div>
 
         <div class="tabs">
@@ -302,11 +337,23 @@
 
       if (activeTab === 'dashboard') {
         html += `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-            <div class="stat"><div class="stat-label">📦 Satılan</div><div class="stat-value">${toplamSatilan}</div></div>
-            <div class="stat"><div class="stat-label">📋 Sipariş</div><div class="stat-value">${toplamSiparis}</div></div>
-            <div class="stat"><div class="stat-label">💵 Tahsil</div><div class="stat-value">${toplamTahsil}</div></div>
-            <div class="stat"><div class="stat-label">📊 Giderler</div><div class="stat-value">${toplamGider}</div></div>
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">📦 Satılan (kg)</div>
+              <div class="stat-value">${toplamSatilan}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">📋 Sipariş (kg)</div>
+              <div class="stat-value">${toplamSiparis}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">💵 Tahsil (₺)</div>
+              <div class="stat-value">${toplamTahsil}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">📊 Giderler (₺)</div>
+              <div class="stat-value">${toplamGider}</div>
+            </div>
           </div>
         `;
       }
@@ -314,6 +361,7 @@
       if (activeTab === 'musteriler') {
         html += `
           <button class="btn-add" onclick="toggleForm('form-musteri');">➕ Müşteri Ekle</button>
+          
           <div id="form-musteri" class="form hidden">
             <h3>Yeni Müşteri</h3>
             <input type="text" id="musteri-isim" placeholder="İsim" />
@@ -322,7 +370,8 @@
             <input type="text" id="musteri-sehir" placeholder="Şehir" />
             <button onclick="addMusteri()">✓ Kaydet</button>
           </div>
-          ${musteriArray.length === 0 ? '<p style="text-align: center; color: #888;">Müşteri yok</p>' : ''}
+
+          ${musteriArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Müşteri yok</p>' : ''}
           ${musteriArray.map(([id, m]) => `
             <div class="item">
               <button class="item-delete" onclick="deleteItem('musteri', '${id}')">Sil</button>
@@ -336,6 +385,7 @@
       if (activeTab === 'satislar') {
         html += `
           <button class="btn-add" onclick="toggleForm('form-satis');">➕ Satış Ekle</button>
+          
           <div id="form-satis" class="form hidden">
             <h3>Yeni Satış</h3>
             <input type="text" id="satis-musteri" placeholder="Müşteri Adı" />
@@ -344,7 +394,8 @@
             <input type="number" step="0.01" id="satis-tahsil" placeholder="Tahsil (₺)" />
             <button onclick="addSatis()">✓ Kaydet</button>
           </div>
-          ${satisArray.length === 0 ? '<p style="text-align: center; color: #888;">Satış yok</p>' : ''}
+
+          ${satisArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Satış yok</p>' : ''}
           ${satisArray.map(([id, s]) => `
             <div class="item">
               <button class="item-delete" onclick="deleteItem('satis', '${id}')">Sil</button>
@@ -358,6 +409,7 @@
       if (activeTab === 'giderler') {
         html += `
           <button class="btn-add" onclick="toggleForm('form-gider');">➕ Gider Ekle</button>
+          
           <div id="form-gider" class="form hidden">
             <h3>Yeni Gider</h3>
             <select id="gider-kategori">
@@ -372,7 +424,8 @@
             <input type="number" step="0.01" id="gider-tutar" placeholder="Tutar (₺)" />
             <button onclick="addGider()">✓ Kaydet</button>
           </div>
-          ${giderArray.length === 0 ? '<p style="text-align: center; color: #888;">Gider yok</p>' : ''}
+
+          ${giderArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Gider yok</p>' : ''}
           ${giderArray.map(([id, g]) => `
             <div class="item" style="border-left-color: #dc2626;">
               <button class="item-delete" onclick="deleteItem('gider', '${id}')">Sil</button>
@@ -390,8 +443,6 @@
 
       document.getElementById('app').innerHTML = html;
     }
-
-    render();
   </script>
 </body>
 </html>
