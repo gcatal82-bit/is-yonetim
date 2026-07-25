@@ -3,16 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim - Firebase</title>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
+  <title>📊 İş Yönetim</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial; background: #f5f5f5; padding-bottom: 80px; }
     .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; }
     .header h1 { font-size: 24px; }
-    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #ddd; position: sticky; top: 0; z-index: 10; }
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #ddd; }
     .tab { padding: 12px; text-align: center; cursor: pointer; font-size: 20px; }
     .tab.active { background: #1e40af; color: white; }
     .container { max-width: 600px; margin: 0 auto; padding: 15px; }
@@ -24,6 +21,7 @@
     .form button { width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
     .item { background: white; padding: 12px; margin: 10px 0; border-radius: 6px; border-left: 4px solid #0ea5e9; }
     .item-del { float: right; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; }
+    .sync-btn { width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; cursor: pointer; margin-bottom: 15px; }
     .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 20px; }
     .login-box { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 8px; }
     .login-input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px; }
@@ -32,54 +30,22 @@
   </style>
 </head>
 <body>
-  <div id="app">Loading...</div>
-
+  <div id="app"></div>
   <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
-      authDomain: "is-yonetim-2551c.firebaseapp.com",
-      databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "is-yonetim-2551c",
-      storageBucket: "is-yonetim-2551c.firebasestorage.app",
-      messagingSenderId: "692969462148",
-      appId: "1:692969462148:web:e0cd274b97d92e9d5565d1"
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const auth = firebase.auth();
-    const db = firebase.database();
-
-    let current_user = null;
+    let users = JSON.parse(localStorage.getItem('users')) || {};
+    let current = localStorage.getItem('current');
     let tab = 'dash';
-    let app_data = { mus: {}, sat: {}, gid: {} };
 
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        current_user = user.email;
-        load_data();
-      } else {
-        show_login();
-      }
-    });
-
-    function load_data() {
-      db.ref('users/' + current_user.replace('@','_')).on('value', snapshot => {
-        if (snapshot.val()) {
-          app_data = snapshot.val();
-        } else {
-          app_data = { mus: {}, sat: {}, gid: {} };
-        }
-        show();
-      });
+    function getData() {
+      return JSON.parse(localStorage.getItem('app_' + current)) || { mus: {}, sat: {}, gid: {} };
     }
 
     function save(d) {
-      db.ref('users/' + current_user.replace('@','_')).set(d);
-      app_data = d;
+      localStorage.setItem('app_' + current, JSON.stringify(d));
       show();
     }
 
-    function show_login() {
+    function showLogin() {
       document.getElementById('app').innerHTML = `
         <div class="login-box">
           <h1 style="text-align: center; color: #1e40af; margin-bottom: 20px;">📊 İş Yönetim</h1>
@@ -109,32 +75,40 @@
     function login() {
       let e = document.getElementById('em').value;
       let p = document.getElementById('pw').value;
-      auth.signInWithEmailAndPassword(e, p).catch(er => alert(er.message));
+      if (users[e] && users[e].pw === p) {
+        localStorage.setItem('current', e);
+        current = e;
+        show();
+      } else alert('Hatalı!');
     }
 
     function signup() {
       let e = document.getElementById('se').value;
       let p = document.getElementById('sp').value;
-      auth.createUserWithEmailAndPassword(e, p).then(() => {
-        alert('Oldu!');
-        tog();
-      }).catch(er => alert(er.message));
+      if (!e || !p) { alert('Doldurun'); return; }
+      if (users[e]) { alert('Var'); return; }
+      users[e] = { pw: p };
+      localStorage.setItem('users', JSON.stringify(users));
+      alert('Oldu!');
+      tog();
     }
 
     function add_mus() {
       let isim = document.getElementById('misim').value;
       let soy = document.getElementById('msoy').value;
       if (!isim || !soy) { alert('Doldur'); return; }
-      app_data.mus['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
-      save(app_data);
+      let d = getData();
+      d.mus['m' + Date.now()] = { isim, soy, tel: document.getElementById('mtel').value, shr: document.getElementById('mshr').value };
+      save(d);
       document.getElementById('misim').value = '';
     }
 
     function add_sat() {
       let mus = document.getElementById('smus').value;
       if (!mus) { alert('Müşteri'); return; }
-      app_data.sat['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0 };
-      save(app_data);
+      let d = getData();
+      d.sat['s' + Date.now()] = { mus, sat: parseFloat(document.getElementById('ssat').value) || 0 };
+      save(d);
       document.getElementById('smus').value = '';
     }
 
@@ -142,35 +116,58 @@
       let kat = document.getElementById('gkat').value;
       let aç = document.getElementById('gaç').value;
       if (!kat || !aç) { alert('Doldur'); return; }
-      app_data.gid['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
-      save(app_data);
+      let d = getData();
+      d.gid['g' + Date.now()] = { kat, aç, tur: parseFloat(document.getElementById('gtur').value) || 0 };
+      save(d);
+      document.getElementById('gkat').value = '';
     }
 
     function del(tip, id) {
       if (!confirm('Sil?')) return;
-      delete app_data[tip][id];
-      save(app_data);
+      let d = getData();
+      delete d[tip][id];
+      save(d);
+    }
+
+    function exportData() {
+      let d = getData();
+      let code = btoa(JSON.stringify(d));
+      alert('KOD:\n' + code);
+    }
+
+    function importData() {
+      let code = prompt('Kodu yapıştır:');
+      if (!code) return;
+      try {
+        let d = JSON.parse(atob(code));
+        localStorage.setItem('app_' + current, JSON.stringify(d));
+        alert('Yüklendi!');
+        show();
+      } catch {
+        alert('Hata!');
+      }
     }
 
     function logout() {
-      auth.signOut();
-      current_user = null;
-      app_data = { mus: {}, sat: {}, gid: {} };
+      localStorage.removeItem('current');
+      current = null;
+      showLogin();
     }
 
     function show() {
-      if (!current_user) { show_login(); return; }
-      let m = Object.entries(app_data.mus);
-      let s = Object.entries(app_data.sat);
-      let g = Object.entries(app_data.gid);
+      if (!current) { showLogin(); return; }
+      let d = getData();
+      let m = Object.entries(d.mus);
+      let s = Object.entries(d.sat);
+      let g = Object.entries(d.gid);
       let tsat = s.reduce((a,b) => a + (b[1].sat || 0), 0);
 
-      let h = `<div class="header"><h1>📊 İş Yönetim</h1><p>☁️ ${current_user}</p></div>`;
+      let h = `<div class="header"><h1>📊 İş Yönetim</h1><p>📧 ${current}</p></div>`;
       h += `<div class="tabs"><div class="tab ${tab === 'dash' ? 'active' : ''}" onclick="tab='dash'; show();">📊</div><div class="tab ${tab === 'mus' ? 'active' : ''}" onclick="tab='mus'; show();">👥</div><div class="tab ${tab === 'sat' ? 'active' : ''}" onclick="tab='sat'; show();">📝</div><div class="tab ${tab === 'gid' ? 'active' : ''}" onclick="tab='gid'; show();">💰</div></div>`;
       h += `<div class="container">`;
 
       if (tab === 'dash') {
-        h += `<div class="stat"><div style="font-size:12px;">📦 Satılan</div><div class="stat-val">${tsat}</div></div>`;
+        h += `<button class="sync-btn" onclick="exportData();">📤 Verileri Gönder</button><button class="sync-btn" onclick="importData();">📥 Verileri Al</button><div class="stat"><div style="font-size:12px;">📦 Satılan</div><div class="stat-val">${tsat}</div></div>`;
       }
 
       if (tab === 'mus') {
@@ -191,7 +188,7 @@
       h += `<button class="logout-btn" onclick="logout()">Çıkış</button></div>`;
       document.getElementById('app').innerHTML = h;
     }
-PM
+
     show();
   </script>
 </body>
