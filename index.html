@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>📊 İş Yönetim Sistemi</title>
+  <title>📊 İş Yönetim Sistemi - Bulut</title>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database.js"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
@@ -50,34 +53,62 @@
     .btn-login { background: #1e40af; color: white; }
     .btn-signup { background: #059669; color: white; }
     .btn-reset { background: #f59e0b; color: white; }
-    .btn-back { background: #666; color: white; }
     .link-text { text-align: center; margin-top: 15px; }
     .link-text a { color: #1e40af; text-decoration: none; cursor: pointer; font-weight: 600; }
     .link-text a:hover { text-decoration: underline; }
     
     .hidden { display: none !important; }
+    .sync-badge { display: inline-block; background: #10b981; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-left: 5px; }
   </style>
 </head>
 <body>
   <div id="app"></div>
 
   <script>
-    let users = JSON.parse(localStorage.getItem('users')) || {};
-    let currentUser = localStorage.getItem('currentUser');
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxtiH7xG2P3J_6PFbmYZ6hod0KBH0B11E",
+      authDomain: "is-yonetim-2551c.firebaseapp.com",
+      databaseURL: "https://is-yonetim-2551c-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "is-yonetim-2551c",
+      storageBucket: "is-yonetim-2551c.firebasestorage.app",
+      messagingSenderId: "692969462148",
+      appId: "1:692969462148:web:e0cd274b97d92e9d5565d1"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    let currentUser = null;
     let activeTab = 'dashboard';
-    let currentPage = 'login'; // login, signup, reset
+    let appData = { musteriler: {}, satislar: {}, giderler: {} };
 
-    function getAppData() {
-      return JSON.parse(localStorage.getItem('app_' + currentUser)) || {
-        musteriler: {},
-        satislar: {},
-        giderler: {}
-      };
-    }
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        currentUser = user;
+        loadDataFromFirebase();
+      } else {
+        showLoginPage();
+      }
+    });
 
-    function saveAppData(data) {
-      localStorage.setItem('app_' + currentUser, JSON.stringify(data));
-      render();
+    function loadDataFromFirebase() {
+      const uid = currentUser.uid;
+      
+      db.ref('musteriler/' + uid).on('value', snapshot => {
+        appData.musteriler = snapshot.val() || {};
+        render();
+      });
+      
+      db.ref('satislar/' + uid).on('value', snapshot => {
+        appData.satislar = snapshot.val() || {};
+        render();
+      });
+      
+      db.ref('giderler/' + uid).on('value', snapshot => {
+        appData.giderler = snapshot.val() || {};
+        render();
+      });
     }
 
     function showLoginPage() {
@@ -86,14 +117,14 @@
           <div class="login-box">
             <div class="login-header">
               <h1>📊 İş Yönetim</h1>
-              <p>Senkronizasyon Sistemi</p>
+              <p>☁️ Bulut Senkronizasyon</p>
             </div>
 
             <div id="login-form">
               <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">Giriş Yap</h2>
               <input type="email" id="email" placeholder="Email" class="login-input">
               <input type="password" id="password" placeholder="Şifre" class="login-input">
-              <button onclick="login()" class="login-btn login-btn">Giriş Yap</button>
+              <button onclick="login()" class="login-btn btn-login">Giriş Yap</button>
               <div class="link-text">
                 <a onclick="showSignupForm()">Hesap Oluştur</a> | <a onclick="showResetForm()">Şifremi Unuttum</a>
               </div>
@@ -151,14 +182,7 @@
         return;
       }
 
-      if (users[email] && users[email].password === password) {
-        localStorage.setItem('currentUser', email);
-        currentUser = email;
-        activeTab = 'dashboard';
-        render();
-      } else {
-        alert('Email veya şifre yanlış!');
-      }
+      auth.signInWithEmailAndPassword(email, password).catch(e => alert(e.message));
     }
 
     function signup() {
@@ -171,33 +195,25 @@
         return;
       }
 
-      if (users[email]) {
-        alert('Bu email zaten kayıtlı!');
-      } else {
-        users[email] = {name, password};
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('✅ Hesap oluşturuldu! Giriş yapabilirsiniz.');
+      auth.createUserWithEmailAndPassword(email, password).then(() => {
+        db.ref('users/' + auth.currentUser.uid).set({name, email});
+        alert('✅ Hesap oluşturuldu!');
         showLoginForm();
-      }
+      }).catch(e => alert(e.message));
     }
 
     function resetPassword() {
       const email = document.getElementById('reset-email').value;
-      const newPassword = document.getElementById('reset-password').value;
       
-      if (!email || !newPassword) {
-        alert('Email ve yeni şifre boş bırakılamaz!');
+      if (!email) {
+        alert('Email boş bırakılamaz!');
         return;
       }
 
-      if (users[email]) {
-        users[email].password = newPassword;
-        localStorage.setItem('users', JSON.stringify(users));
-        alert('✅ Şifre sıfırlandı! Giriş yapabilirsiniz.');
+      auth.sendPasswordResetEmail(email).then(() => {
+        alert('✅ Şifre sıfırlama linki gönderildi! Email kontrol et.');
         showLoginForm();
-      } else {
-        alert('Bu email kayıtlı değil!');
-      }
+      }).catch(e => alert(e.message));
     }
 
     function addMusteri() {
@@ -211,10 +227,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'mus_' + Date.now();
-      data.musteriler[id] = {isim, soyisim, telefon, sehir, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('musteriler/' + currentUser.uid + '/' + id).set({
+        isim, soyisim, telefon, sehir,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('musteri-isim').value = '';
       document.getElementById('musteri-soyisim').value = '';
@@ -234,10 +251,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'sat_' + Date.now();
-      data.satislar[id] = {musteri, satilan, siparis, tahsil, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('satislar/' + currentUser.uid + '/' + id).set({
+        musteri, satilan, siparis, tahsil,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('satis-musteri').value = '';
       document.getElementById('satis-satilan').value = '';
@@ -256,10 +274,11 @@
         return;
       }
 
-      const data = getAppData();
       const id = 'gid_' + Date.now();
-      data.giderler[id] = {kategori, aciklama, tutar, tarih: new Date().toLocaleDateString('tr-TR')};
-      saveAppData(data);
+      db.ref('giderler/' + currentUser.uid + '/' + id).set({
+        kategori, aciklama, tutar,
+        tarih: new Date().toLocaleDateString('tr-TR')
+      });
       
       document.getElementById('gider-kategori').value = '';
       document.getElementById('gider-aciklama').value = '';
@@ -269,18 +288,15 @@
 
     function deleteItem(type, id) {
       if (!confirm('Silmek istediğinize emin misiniz?')) return;
-      const data = getAppData();
-      if (type === 'musteri') delete data.musteriler[id];
-      if (type === 'satis') delete data.satislar[id];
-      if (type === 'gider') delete data.giderler[id];
-      saveAppData(data);
+      
+      if (type === 'musteri') db.ref('musteriler/' + currentUser.uid + '/' + id).remove();
+      if (type === 'satis') db.ref('satislar/' + currentUser.uid + '/' + id).remove();
+      if (type === 'gider') db.ref('giderler/' + currentUser.uid + '/' + id).remove();
     }
 
     function logout() {
-      localStorage.removeItem('currentUser');
-      currentUser = null;
+      auth.signOut();
       activeTab = 'dashboard';
-      showLoginPage();
     }
 
     function toggleForm(formId) {
@@ -294,12 +310,9 @@
         return;
       }
 
-      const data = getAppData();
-      const user = users[currentUser];
-
-      const musteriArray = Object.entries(data.musteriler);
-      const satisArray = Object.entries(data.satislar);
-      const giderArray = Object.entries(data.giderler);
+      const musteriArray = Object.entries(appData.musteriler);
+      const satisArray = Object.entries(appData.satislar);
+      const giderArray = Object.entries(appData.giderler);
 
       const toplamSatilan = satisArray.reduce((a, b) => a + (b[1].satilan || 0), 0);
       const toplamSiparis = satisArray.reduce((a, b) => a + (b[1].siparis || 0), 0);
@@ -309,7 +322,7 @@
       let html = `
         <div class="header">
           <h1>📊 İş Yönetim Sistemi</h1>
-          <p>👤 ${user.name} (${currentUser})</p>
+          <p>📧 ${currentUser.email} <span class="sync-badge">☁️ SENKRON</span></p>
         </div>
 
         <div class="tabs">
@@ -358,80 +371,4 @@
             <button onclick="addMusteri()">✓ Kaydet</button>
           </div>
 
-          ${musteriArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Müşteri yok</p>' : ''}
-          ${musteriArray.map(([id, m]) => `
-            <div class="item">
-              <button class="item-delete" onclick="deleteItem('musteri', '${id}')">Sil</button>
-              <div class="item-title">${m.isim} ${m.soyisim}</div>
-              <div class="item-info">📱 ${m.telefon} | 🏙️ ${m.sehir}</div>
-            </div>
-          `).join('')}
-        `;
-      }
-
-      if (activeTab === 'satislar') {
-        html += `
-          <button class="btn-add" onclick="toggleForm('form-satis');">➕ Satış Ekle</button>
-          
-          <div id="form-satis" class="form hidden">
-            <h3>Yeni Satış</h3>
-            <input type="text" id="satis-musteri" placeholder="Müşteri Adı" />
-            <input type="number" step="0.1" id="satis-satilan" placeholder="Satılan (kg)" />
-            <input type="number" step="0.1" id="satis-siparis" placeholder="Sipariş (kg)" />
-            <input type="number" step="0.01" id="satis-tahsil" placeholder="Tahsil (₺)" />
-            <button onclick="addSatis()">✓ Kaydet</button>
-          </div>
-
-          ${satisArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Satış yok</p>' : ''}
-          ${satisArray.map(([id, s]) => `
-            <div class="item">
-              <button class="item-delete" onclick="deleteItem('satis', '${id}')">Sil</button>
-              <div class="item-title">${s.musteri}</div>
-              <div class="item-info">📦 ${s.satilan}kg | 📋 ${s.siparis}kg | 💵 ${s.tahsil}₺ | 📅 ${s.tarih}</div>
-            </div>
-          `).join('')}
-        `;
-      }
-
-      if (activeTab === 'giderler') {
-        html += `
-          <button class="btn-add" onclick="toggleForm('form-gider');">➕ Gider Ekle</button>
-          
-          <div id="form-gider" class="form hidden">
-            <h3>Yeni Gider</h3>
-            <select id="gider-kategori">
-              <option value="">Kategori Seçin</option>
-              <option value="Elektrik">⚡ Elektrik</option>
-              <option value="Su">💧 Su</option>
-              <option value="Kira">🏠 Kira</option>
-              <option value="Malzeme">🛠️ Malzeme</option>
-              <option value="Diğer">📌 Diğer</option>
-            </select>
-            <input type="text" id="gider-aciklama" placeholder="Açıklama" />
-            <input type="number" step="0.01" id="gider-tutar" placeholder="Tutar (₺)" />
-            <button onclick="addGider()">✓ Kaydet</button>
-          </div>
-
-          ${giderArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Gider yok</p>' : ''}
-          ${giderArray.map(([id, g]) => `
-            <div class="item" style="border-left-color: #dc2626;">
-              <button class="item-delete" onclick="deleteItem('gider', '${id}')">Sil</button>
-              <div class="item-title">${g.aciklama}</div>
-              <div class="item-info">📂 ${g.kategori} | 💰 ${g.tutar}₺ | 📅 ${g.tarih}</div>
-            </div>
-          `).join('')}
-        `;
-      }
-
-      html += `
-          <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
-        </div>
-      `;
-
-      document.getElementById('app').innerHTML = html;
-    }
-
-    render();
-  </script>
-</body>
-</html>
+          ${musteriArray.length === 0 ? '
