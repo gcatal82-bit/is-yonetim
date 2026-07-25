@@ -1,91 +1,351 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-  <title>İş Yönetim</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>İş Yönetim Sistemi</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; }
+    .header h1 { font-size: 24px; margin-bottom: 5px; }
+    .header p { font-size: 12px; opacity: 0.9; }
+    
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 0; background: white; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 10; }
+    .tab { padding: 12px; text-align: center; cursor: pointer; border: none; background: white; font-size: 20px; }
+    .tab.active { background: #1e40af; color: white; }
+    
+    .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+    
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat { background: white; padding: 15px; border-radius: 8px; border-left: 4px solid #1e40af; }
+    .stat-label { font-size: 11px; color: #666; margin-bottom: 5px; }
+    .stat-value { font-size: 20px; font-weight: bold; color: #1e40af; }
+    
+    .add-btn { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 15px; font-weight: 600; }
+    .add-btn:active { background: #1e3a8a; }
+    
+    .form { background: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    .form input, .form select { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+    .form button { width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+    
+    .item { background: white; padding: 12px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #0ea5e9; }
+    .item-title { font-weight: 600; margin-bottom: 3px; }
+    .item-info { font-size: 12px; color: #666; }
+    .item-delete { float: right; background: #dc2626; color: white; border: none; padding: 4px 8px; border-radius: 3px; cursor: pointer; font-size: 12px; }
+    
+    .hidden { display: none; }
+    
+    .logout-btn { width: 100%; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; margin-top: 20px; }
+  </style>
 </head>
-<body style="font-family: Arial; padding: 40px; text-align: center; background: #f0f0f0;">
+<body>
   <div id="app"></div>
-  
+
   <script>
     let users = JSON.parse(localStorage.getItem('users')) || {};
     let currentUser = localStorage.getItem('currentUser');
-    
+    let activeTab = 'dashboard';
+
+    function getAppData() {
+      return JSON.parse(localStorage.getItem('app_' + currentUser)) || {
+        musteriler: {},
+        satislar: {},
+        giderler: {}
+      };
+    }
+
+    function saveAppData(data) {
+      localStorage.setItem('app_' + currentUser, JSON.stringify(data));
+    }
+
     function showLogin() {
       document.getElementById('app').innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 300px; margin: 50px auto;">
-          <h1>📊 İş Yönetim Sistemi</h1>
-          <input type="email" id="email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
-          <input type="password" id="password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
-          <button onclick="login()" style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Giriş Yap</button>
-          <button onclick="showSignup()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer;">Hesap Oluştur</button>
+        <div style="max-width: 400px; margin: 100px auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+            <h1 style="font-size: 28px; margin-bottom: 5px;">📊 İş Yönetim</h1>
+            <p style="font-size: 12px; opacity: 0.9;">2 Kişi Senkronizasyon Sistemi</p>
+          </div>
+          <div style="background: white; padding: 20px; border-radius: 8px;">
+            <h2 style="margin-bottom: 15px; font-size: 16px;">Giriş Yap</h2>
+            <input type="email" id="email" placeholder="email@example.com" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <input type="password" id="password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="login()" style="width: 100%; padding: 10px; background: #1e40af; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; font-weight: 600;">Giriş Yap</button>
+            <button onclick="showSignupForm()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; font-weight: 600;">Hesap Oluştur</button>
+          </div>
         </div>
       `;
     }
-    
-    function showSignup() {
+
+    function showSignupForm() {
       document.getElementById('app').innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 300px; margin: 50px auto;">
-          <h1>📊 Hesap Oluştur</h1>
-          <input type="text" id="name" placeholder="Adınız" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
-          <input type="email" id="signup-email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
-          <input type="password" id="signup-password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; box-sizing: border-box;">
-          <button onclick="signup()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0;">Oluştur</button>
-          <button onclick="showLogin()" style="width: 100%; padding: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer;">Giriş Sayfasına Dön</button>
+        <div style="max-width: 400px; margin: 100px auto; padding: 20px;">
+          <div style="background: white; padding: 20px; border-radius: 8px;">
+            <h2 style="margin-bottom: 15px; font-size: 16px;">Hesap Oluştur</h2>
+            <input type="text" id="name" placeholder="Adınız" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <input type="email" id="signup-email" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <input type="password" id="signup-password" placeholder="Şifre" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 4px;">
+            <button onclick="signup()" style="width: 100%; padding: 10px; background: #059669; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; font-weight: 600;">Oluştur</button>
+            <button onclick="showLogin()" style="width: 100%; padding: 10px; background: #666; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 600;">Giriş Sayfasına Dön</button>
+          </div>
         </div>
       `;
     }
-    
+
     function login() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      
       if (users[email] && users[email].password === password) {
         localStorage.setItem('currentUser', email);
-        showDashboard();
+        currentUser = email;
+        render();
       } else {
         alert('Email veya şifre yanlış!');
       }
     }
-    
+
     function signup() {
       const name = document.getElementById('name').value;
       const email = document.getElementById('signup-email').value;
       const password = document.getElementById('signup-password').value;
-      
       if (users[email]) {
         alert('Bu email zaten kullanılıyor!');
       } else {
         users[email] = {name, password};
         localStorage.setItem('users', JSON.stringify(users));
-        alert('Hesap oluşturuldu! Giriş yapabilirsiniz.');
+        alert('Hesap oluşturuldu!');
         showLogin();
       }
     }
-    
-    function showDashboard() {
-      const email = localStorage.getItem('currentUser');
-      const user = users[email];
+
+    function addMusteri() {
+      const isim = document.getElementById('musteri-isim').value;
+      const soyisim = document.getElementById('musteri-soyisim').value;
+      const telefon = document.getElementById('musteri-telefon').value;
+      const sehir = document.getElementById('musteri-sehir').value;
       
-      document.getElementById('app').innerHTML = `
-        <div style="background: white; padding: 30px; border-radius: 8px; max-width: 400px; margin: 50px auto;">
-          <h1>📊 Hoşgeldiniz!</h1>
-          <p>👤 ${user.name}</p>
-          <p>📧 ${email}</p>
-          <button onclick="logout()" style="width: 100%; padding: 10px; background: #dc2626; color: white; border: none; border-radius: 4px; cursor: pointer;">Çıkış Yap</button>
-        </div>
-      `;
+      if (!isim || !soyisim) {
+        alert('İsim ve Soyisim boş bırakılamaz!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'mus_' + Date.now();
+      data.musteriler[id] = {isim, soyisim, telefon, sehir, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('musteri-isim').value = '';
+      document.getElementById('musteri-soyisim').value = '';
+      document.getElementById('musteri-telefon').value = '';
+      document.getElementById('musteri-sehir').value = '';
+      render();
     }
-    
+
+    function addSatis() {
+      const musteri = document.getElementById('satis-musteri').value;
+      const satilan = parseFloat(document.getElementById('satis-satilan').value) || 0;
+      const siparis = parseFloat(document.getElementById('satis-siparis').value) || 0;
+      const tahsil = parseFloat(document.getElementById('satis-tahsil').value) || 0;
+
+      if (!musteri) {
+        alert('Müşteri adı boş bırakılamaz!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'sat_' + Date.now();
+      data.satislar[id] = {musteri, satilan, siparis, tahsil, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('satis-musteri').value = '';
+      document.getElementById('satis-satilan').value = '';
+      document.getElementById('satis-siparis').value = '';
+      document.getElementById('satis-tahsil').value = '';
+      render();
+    }
+
+    function addGider() {
+      const kategori = document.getElementById('gider-kategori').value;
+      const aciklama = document.getElementById('gider-aciklama').value;
+      const tutar = parseFloat(document.getElementById('gider-tutar').value) || 0;
+
+      if (!kategori || !aciklama) {
+        alert('Kategori ve Açıklama boş bırakılamaz!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'gid_' + Date.now();
+      data.giderler[id] = {kategori, aciklama, tutar, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('gider-kategori').value = '';
+      document.getElementById('gider-aciklama').value = '';
+      document.getElementById('gider-tutar').value = '';
+      render();
+    }
+
+    function deleteItem(type, id) {
+      if (!confirm('Silmek istediğinize emin misiniz?')) return;
+      const data = getAppData();
+      if (type === 'musteri') delete data.musteriler[id];
+      if (type === 'satis') delete data.satislar[id];
+      if (type === 'gider') delete data.giderler[id];
+      saveAppData(data);
+      render();
+    }
+
     function logout() {
       localStorage.removeItem('currentUser');
+      currentUser = null;
+      activeTab = 'dashboard';
       showLogin();
     }
-    
-    if (currentUser) {
-      showDashboard();
-    } else {
-      showLogin();
+
+    function render() {
+      if (!currentUser) {
+        showLogin();
+        return;
+      }
+
+      const data = getAppData();
+      const user = users[currentUser];
+
+      const musteriArray = Object.entries(data.musteriler);
+      const satisArray = Object.entries(data.satislar);
+      const giderArray = Object.entries(data.giderler);
+
+      const toplamSatilan = satisArray.reduce((a, b) => a + b[1].satilan, 0);
+      const toplamSiparis = satisArray.reduce((a, b) => a + b[1].siparis, 0);
+      const toplamTahsil = satisArray.reduce((a, b) => a + b[1].tahsil, 0);
+      const toplamGider = giderArray.reduce((a, b) => a + b[1].tutar, 0);
+
+      let html = `
+        <div class="header">
+          <h1>📊 İş Yönetim Sistemi</h1>
+          <p>👤 ${user.name} | ${currentUser}</p>
+        </div>
+
+        <div class="tabs">
+          <div class="tab ${activeTab === 'dashboard' ? 'active' : ''}" onclick="activeTab='dashboard'; render();">📊</div>
+          <div class="tab ${activeTab === 'musteriler' ? 'active' : ''}" onclick="activeTab='musteriler'; render();">👥</div>
+          <div class="tab ${activeTab === 'satislar' ? 'active' : ''}" onclick="activeTab='satislar'; render();">📝</div>
+          <div class="tab ${activeTab === 'giderler' ? 'active' : ''}" onclick="activeTab='giderler'; render();">💰</div>
+        </div>
+
+        <div class="container">
+      `;
+
+      if (activeTab === 'dashboard') {
+        html += `
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">Satılan (kg)</div>
+              <div class="stat-value">${toplamSatilan}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Sipariş (kg)</div>
+              <div class="stat-value">${toplamSiparis}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Tahsil (₺)</div>
+              <div class="stat-value">${toplamTahsil}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Giderler (₺)</div>
+              <div class="stat-value">${toplamGider}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeTab === 'musteriler') {
+        html += `
+          <button class="add-btn" onclick="document.getElementById('form-musteri').style.display = document.getElementById('form-musteri').style.display === 'none' ? 'block' : 'none';">➕ Müşteri Ekle</button>
+          
+          <div id="form-musteri" class="form" style="display: none;">
+            <h3 style="margin-bottom: 10px;">Yeni Müşteri</h3>
+            <input type="text" id="musteri-isim" placeholder="İsim" />
+            <input type="text" id="musteri-soyisim" placeholder="Soyisim" />
+            <input type="tel" id="musteri-telefon" placeholder="Telefon" />
+            <input type="text" id="musteri-sehir" placeholder="Şehir" />
+            <button onclick="addMusteri()">Kaydet</button>
+          </div>
+
+          ${musteriArray.length === 0 ? '<p style="text-align: center; color: #666;">Müşteri yok</p>' : ''}
+          ${musteriArray.map(([id, m]) => `
+            <div class="item">
+              <button class="item-delete" onclick="deleteItem('musteri', '${id}')">Sil</button>
+              <div class="item-title">${m.isim} ${m.soyisim}</div>
+              <div class="item-info">📱 ${m.telefon} | 🏙️ ${m.sehir}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      if (activeTab === 'satislar') {
+        html += `
+          <button class="add-btn" onclick="document.getElementById('form-satis').style.display = document.getElementById('form-satis').style.display === 'none' ? 'block' : 'none';">➕ Satış Ekle</button>
+          
+          <div id="form-satis" class="form" style="display: none;">
+            <h3 style="margin-bottom: 10px;">Yeni Satış</h3>
+            <input type="text" id="satis-musteri" placeholder="Müşteri Adı" />
+            <input type="number" step="0.1" id="satis-satilan" placeholder="Satılan (kg)" />
+            <input type="number" step="0.1" id="satis-siparis" placeholder="Sipariş (kg)" />
+            <input type="number" step="0.01" id="satis-tahsil" placeholder="Tahsil (₺)" />
+            <button onclick="addSatis()">Kaydet</button>
+          </div>
+
+          ${satisArray.length === 0 ? '<p style="text-align: center; color: #666;">Satış yok</p>' : ''}
+          ${satisArray.map(([id, s]) => `
+            <div class="item">
+              <button class="item-delete" onclick="deleteItem('satis', '${id}')">Sil</button>
+              <div class="item-title">${s.musteri}</div>
+              <div class="item-info">📦 ${s.satilan}kg | 📋 ${s.siparis}kg | 💵 ${s.tahsil}₺</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      if (activeTab === 'giderler') {
+        html += `
+          <button class="add-btn" onclick="document.getElementById('form-gider').style.display = document.getElementById('form-gider').style.display === 'none' ? 'block' : 'none';">➕ Gider Ekle</button>
+          
+          <div id="form-gider" class="form" style="display: none;">
+            <h3 style="margin-bottom: 10px;">Yeni Gider</h3>
+            <select id="gider-kategori">
+              <option value="">Kategori Seçin</option>
+              <option value="Elektrik">⚡ Elektrik</option>
+              <option value="Su">💧 Su</option>
+              <option value="Kira">🏠 Kira</option>
+              <option value="Malzeme">🛠️ Malzeme</option>
+              <option value="Diğer">📌 Diğer</option>
+            </select>
+            <input type="text" id="gider-aciklama" placeholder="Açıklama" />
+            <input type="number" step="0.01" id="gider-tutar" placeholder="Tutar (₺)" />
+            <button onclick="addGider()">Kaydet</button>
+          </div>
+
+          ${giderArray.length === 0 ? '<p style="text-align: center; color: #666;">Gider yok</p>' : ''}
+          ${giderArray.map(([id, g]) => `
+            <div class="item" style="border-left-color: #dc2626;">
+              <button class="item-delete" onclick="deleteItem('gider', '${id}')">Sil</button>
+              <div class="item-title">${g.aciklama}</div>
+              <div class="item-info">📂 ${g.kategori} | 💰 ${g.tutar}₺</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      html += `
+          <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+        </div>
+      `;
+
+      document.getElementById('app').innerHTML = html;
     }
+
+    render();
   </script>
 </body>
 </html>
