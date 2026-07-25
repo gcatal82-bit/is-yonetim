@@ -1,20 +1,437 @@
 <!DOCTYPE html>
-<html>
+<html lang="tr">
 <head>
-  <title>Test</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📊 İş Yönetim Sistemi</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; padding-bottom: 80px; }
+    
+    .header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 20px; text-align: center; position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    .header h1 { font-size: 28px; margin-bottom: 5px; }
+    .header p { font-size: 13px; opacity: 0.9; }
+    
+    .tabs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; background: white; border-bottom: 2px solid #e5e7eb; position: sticky; top: 70px; z-index: 15; }
+    .tab { padding: 15px; text-align: center; cursor: pointer; font-size: 24px; border: none; background: white; transition: all 0.2s; }
+    .tab:hover { background: #f0f0f0; }
+    .tab.active { background: #1e40af; color: white; }
+    
+    .container { max-width: 600px; margin: 0 auto; padding: 15px; }
+    
+    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+    .stat { background: white; padding: 15px; border-radius: 10px; border-left: 5px solid #1e40af; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .stat-label { font-size: 12px; color: #888; margin-bottom: 8px; font-weight: 500; }
+    .stat-value { font-size: 24px; font-weight: 700; color: #1e40af; }
+    
+    .btn-add { width: 100%; padding: 14px; background: #1e40af; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; margin-bottom: 15px; transition: all 0.2s; }
+    .btn-add:active { background: #1e3a8a; transform: scale(0.98); }
+    
+    .form { background: white; padding: 20px; border-radius: 10px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    .form h3 { margin-bottom: 15px; color: #333; font-size: 16px; }
+    .form input, .form select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+    .form button { width: 100%; padding: 12px; background: #1e40af; color: white; border: none; border-radius: 6px; cursor: pointer; margin-top: 15px; font-weight: 600; }
+    
+    .item { background: white; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 5px solid #0ea5e9; box-shadow: 0 2px 6px rgba(0,0,0,0.05); position: relative; }
+    .item-title { font-weight: 600; margin-bottom: 5px; font-size: 15px; }
+    .item-info { font-size: 12px; color: #888; line-height: 1.5; }
+    .item-delete { position: absolute; top: 10px; right: 10px; background: #dc2626; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    
+    .logout-btn { width: 100%; padding: 14px; background: #dc2626; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 16px; margin-top: 20px; }
+    
+    .login-container { max-width: 400px; margin: 60px auto; }
+    .login-box { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .login-header { background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%); color: white; padding: 25px; border-radius: 12px 12px 0 0; text-align: center; margin: -30px -30px 25px -30px; }
+    .login-header h1 { font-size: 32px; margin-bottom: 5px; }
+    .login-header p { font-size: 13px; opacity: 0.9; }
+    
+    .login-input { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ddd; border-radius: 6px; font-size: 15px; }
+    .login-btn { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: 600; font-size: 15px; margin: 10px 0; }
+    .btn-login { background: #1e40af; color: white; }
+    .btn-signup { background: #059669; color: white; }
+    .btn-reset { background: #f59e0b; color: white; }
+    .btn-back { background: #666; color: white; }
+    .link-text { text-align: center; margin-top: 15px; }
+    .link-text a { color: #1e40af; text-decoration: none; cursor: pointer; font-weight: 600; }
+    .link-text a:hover { text-decoration: underline; }
+    
+    .hidden { display: none !important; }
+  </style>
 </head>
-<body style="text-align: center; padding: 50px; font-family: Arial;">
-  <h1>📊 İş Yönetim Sistemi</h1>
-  <p>Sistem Hazırlanıyor...</p>
-  
-  <div style="margin-top: 30px;">
-    <input type="email" id="email" placeholder="Email" style="padding: 10px; width: 200px;">
-    <input type="password" id="password" placeholder="Şifre" style="padding: 10px; width: 200px;">
-    <button onclick="alert('Email: ' + document.getElementById('email').value)" style="padding: 10px 20px; background: #1e40af; color: white; border: none; cursor: pointer;">Giriş</button>
-  </div>
-  
+<body>
+  <div id="app"></div>
+
   <script>
-    console.log('Sayfa yüklendi!');
+    let users = JSON.parse(localStorage.getItem('users')) || {};
+    let currentUser = localStorage.getItem('currentUser');
+    let activeTab = 'dashboard';
+    let currentPage = 'login'; // login, signup, reset
+
+    function getAppData() {
+      return JSON.parse(localStorage.getItem('app_' + currentUser)) || {
+        musteriler: {},
+        satislar: {},
+        giderler: {}
+      };
+    }
+
+    function saveAppData(data) {
+      localStorage.setItem('app_' + currentUser, JSON.stringify(data));
+      render();
+    }
+
+    function showLoginPage() {
+      document.getElementById('app').innerHTML = `
+        <div class="login-container">
+          <div class="login-box">
+            <div class="login-header">
+              <h1>📊 İş Yönetim</h1>
+              <p>Senkronizasyon Sistemi</p>
+            </div>
+
+            <div id="login-form">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">Giriş Yap</h2>
+              <input type="email" id="email" placeholder="Email" class="login-input">
+              <input type="password" id="password" placeholder="Şifre" class="login-input">
+              <button onclick="login()" class="login-btn login-btn">Giriş Yap</button>
+              <div class="link-text">
+                <a onclick="showSignupForm()">Hesap Oluştur</a> | <a onclick="showResetForm()">Şifremi Unuttum</a>
+              </div>
+            </div>
+
+            <div id="signup-form" class="hidden">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">Hesap Oluştur</h2>
+              <input type="text" id="name" placeholder="Adınız" class="login-input">
+              <input type="email" id="signup-email" placeholder="Email" class="login-input">
+              <input type="password" id="signup-password" placeholder="Şifre" class="login-input">
+              <button onclick="signup()" class="login-btn btn-signup">Oluştur</button>
+              <div class="link-text">
+                <a onclick="showLoginForm()">Giriş Sayfasına Dön</a>
+              </div>
+            </div>
+
+            <div id="reset-form" class="hidden">
+              <h2 style="margin-bottom: 20px; font-size: 18px; color: #333;">🔑 Şifre Sıfırla</h2>
+              <input type="email" id="reset-email" placeholder="Email" class="login-input">
+              <input type="password" id="reset-password" placeholder="Yeni Şifre" class="login-input">
+              <button onclick="resetPassword()" class="login-btn btn-reset">Şifreyi Sıfırla</button>
+              <div class="link-text">
+                <a onclick="showLoginForm()">Giriş Sayfasına Dön</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function showLoginForm() {
+      document.getElementById('login-form').classList.remove('hidden');
+      document.getElementById('signup-form').classList.add('hidden');
+      document.getElementById('reset-form').classList.add('hidden');
+    }
+
+    function showSignupForm() {
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('signup-form').classList.remove('hidden');
+      document.getElementById('reset-form').classList.add('hidden');
+    }
+
+    function showResetForm() {
+      document.getElementById('login-form').classList.add('hidden');
+      document.getElementById('signup-form').classList.add('hidden');
+      document.getElementById('reset-form').classList.remove('hidden');
+    }
+
+    function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      
+      if (!email || !password) {
+        alert('Email ve şifre boş bırakılamaz!');
+        return;
+      }
+
+      if (users[email] && users[email].password === password) {
+        localStorage.setItem('currentUser', email);
+        currentUser = email;
+        activeTab = 'dashboard';
+        render();
+      } else {
+        alert('Email veya şifre yanlış!');
+      }
+    }
+
+    function signup() {
+      const name = document.getElementById('name').value;
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+      
+      if (!name || !email || !password) {
+        alert('Tüm alanlar zorunludur!');
+        return;
+      }
+
+      if (users[email]) {
+        alert('Bu email zaten kayıtlı!');
+      } else {
+        users[email] = {name, password};
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('✅ Hesap oluşturuldu! Giriş yapabilirsiniz.');
+        showLoginForm();
+      }
+    }
+
+    function resetPassword() {
+      const email = document.getElementById('reset-email').value;
+      const newPassword = document.getElementById('reset-password').value;
+      
+      if (!email || !newPassword) {
+        alert('Email ve yeni şifre boş bırakılamaz!');
+        return;
+      }
+
+      if (users[email]) {
+        users[email].password = newPassword;
+        localStorage.setItem('users', JSON.stringify(users));
+        alert('✅ Şifre sıfırlandı! Giriş yapabilirsiniz.');
+        showLoginForm();
+      } else {
+        alert('Bu email kayıtlı değil!');
+      }
+    }
+
+    function addMusteri() {
+      const isim = document.getElementById('musteri-isim').value;
+      const soyisim = document.getElementById('musteri-soyisim').value;
+      const telefon = document.getElementById('musteri-telefon').value;
+      const sehir = document.getElementById('musteri-sehir').value;
+      
+      if (!isim || !soyisim) {
+        alert('İsim ve Soyisim zorunludur!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'mus_' + Date.now();
+      data.musteriler[id] = {isim, soyisim, telefon, sehir, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('musteri-isim').value = '';
+      document.getElementById('musteri-soyisim').value = '';
+      document.getElementById('musteri-telefon').value = '';
+      document.getElementById('musteri-sehir').value = '';
+      document.getElementById('form-musteri').classList.add('hidden');
+    }
+
+    function addSatis() {
+      const musteri = document.getElementById('satis-musteri').value;
+      const satilan = parseFloat(document.getElementById('satis-satilan').value) || 0;
+      const siparis = parseFloat(document.getElementById('satis-siparis').value) || 0;
+      const tahsil = parseFloat(document.getElementById('satis-tahsil').value) || 0;
+
+      if (!musteri) {
+        alert('Müşteri adı zorunludur!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'sat_' + Date.now();
+      data.satislar[id] = {musteri, satilan, siparis, tahsil, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('satis-musteri').value = '';
+      document.getElementById('satis-satilan').value = '';
+      document.getElementById('satis-siparis').value = '';
+      document.getElementById('satis-tahsil').value = '';
+      document.getElementById('form-satis').classList.add('hidden');
+    }
+
+    function addGider() {
+      const kategori = document.getElementById('gider-kategori').value;
+      const aciklama = document.getElementById('gider-aciklama').value;
+      const tutar = parseFloat(document.getElementById('gider-tutar').value) || 0;
+
+      if (!kategori || !aciklama) {
+        alert('Kategori ve Açıklama zorunludur!');
+        return;
+      }
+
+      const data = getAppData();
+      const id = 'gid_' + Date.now();
+      data.giderler[id] = {kategori, aciklama, tutar, tarih: new Date().toLocaleDateString('tr-TR')};
+      saveAppData(data);
+      
+      document.getElementById('gider-kategori').value = '';
+      document.getElementById('gider-aciklama').value = '';
+      document.getElementById('gider-tutar').value = '';
+      document.getElementById('form-gider').classList.add('hidden');
+    }
+
+    function deleteItem(type, id) {
+      if (!confirm('Silmek istediğinize emin misiniz?')) return;
+      const data = getAppData();
+      if (type === 'musteri') delete data.musteriler[id];
+      if (type === 'satis') delete data.satislar[id];
+      if (type === 'gider') delete data.giderler[id];
+      saveAppData(data);
+    }
+
+    function logout() {
+      localStorage.removeItem('currentUser');
+      currentUser = null;
+      activeTab = 'dashboard';
+      showLoginPage();
+    }
+
+    function toggleForm(formId) {
+      const form = document.getElementById(formId);
+      form.classList.toggle('hidden');
+    }
+
+    function render() {
+      if (!currentUser) {
+        showLoginPage();
+        return;
+      }
+
+      const data = getAppData();
+      const user = users[currentUser];
+
+      const musteriArray = Object.entries(data.musteriler);
+      const satisArray = Object.entries(data.satislar);
+      const giderArray = Object.entries(data.giderler);
+
+      const toplamSatilan = satisArray.reduce((a, b) => a + (b[1].satilan || 0), 0);
+      const toplamSiparis = satisArray.reduce((a, b) => a + (b[1].siparis || 0), 0);
+      const toplamTahsil = satisArray.reduce((a, b) => a + (b[1].tahsil || 0), 0);
+      const toplamGider = giderArray.reduce((a, b) => a + (b[1].tutar || 0), 0);
+
+      let html = `
+        <div class="header">
+          <h1>📊 İş Yönetim Sistemi</h1>
+          <p>👤 ${user.name} (${currentUser})</p>
+        </div>
+
+        <div class="tabs">
+          <div class="tab ${activeTab === 'dashboard' ? 'active' : ''}" onclick="activeTab='dashboard'; render();">📊</div>
+          <div class="tab ${activeTab === 'musteriler' ? 'active' : ''}" onclick="activeTab='musteriler'; render();">👥</div>
+          <div class="tab ${activeTab === 'satislar' ? 'active' : ''}" onclick="activeTab='satislar'; render();">📝</div>
+          <div class="tab ${activeTab === 'giderler' ? 'active' : ''}" onclick="activeTab='giderler'; render();">💰</div>
+        </div>
+
+        <div class="container">
+      `;
+
+      if (activeTab === 'dashboard') {
+        html += `
+          <div class="stat-grid">
+            <div class="stat">
+              <div class="stat-label">📦 Satılan (kg)</div>
+              <div class="stat-value">${toplamSatilan}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">📋 Sipariş (kg)</div>
+              <div class="stat-value">${toplamSiparis}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">💵 Tahsil (₺)</div>
+              <div class="stat-value">${toplamTahsil}</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">📊 Giderler (₺)</div>
+              <div class="stat-value">${toplamGider}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      if (activeTab === 'musteriler') {
+        html += `
+          <button class="btn-add" onclick="toggleForm('form-musteri');">➕ Müşteri Ekle</button>
+          
+          <div id="form-musteri" class="form hidden">
+            <h3>Yeni Müşteri</h3>
+            <input type="text" id="musteri-isim" placeholder="İsim" />
+            <input type="text" id="musteri-soyisim" placeholder="Soyisim" />
+            <input type="tel" id="musteri-telefon" placeholder="Telefon" />
+            <input type="text" id="musteri-sehir" placeholder="Şehir" />
+            <button onclick="addMusteri()">✓ Kaydet</button>
+          </div>
+
+          ${musteriArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Müşteri yok</p>' : ''}
+          ${musteriArray.map(([id, m]) => `
+            <div class="item">
+              <button class="item-delete" onclick="deleteItem('musteri', '${id}')">Sil</button>
+              <div class="item-title">${m.isim} ${m.soyisim}</div>
+              <div class="item-info">📱 ${m.telefon} | 🏙️ ${m.sehir}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      if (activeTab === 'satislar') {
+        html += `
+          <button class="btn-add" onclick="toggleForm('form-satis');">➕ Satış Ekle</button>
+          
+          <div id="form-satis" class="form hidden">
+            <h3>Yeni Satış</h3>
+            <input type="text" id="satis-musteri" placeholder="Müşteri Adı" />
+            <input type="number" step="0.1" id="satis-satilan" placeholder="Satılan (kg)" />
+            <input type="number" step="0.1" id="satis-siparis" placeholder="Sipariş (kg)" />
+            <input type="number" step="0.01" id="satis-tahsil" placeholder="Tahsil (₺)" />
+            <button onclick="addSatis()">✓ Kaydet</button>
+          </div>
+
+          ${satisArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Satış yok</p>' : ''}
+          ${satisArray.map(([id, s]) => `
+            <div class="item">
+              <button class="item-delete" onclick="deleteItem('satis', '${id}')">Sil</button>
+              <div class="item-title">${s.musteri}</div>
+              <div class="item-info">📦 ${s.satilan}kg | 📋 ${s.siparis}kg | 💵 ${s.tahsil}₺ | 📅 ${s.tarih}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      if (activeTab === 'giderler') {
+        html += `
+          <button class="btn-add" onclick="toggleForm('form-gider');">➕ Gider Ekle</button>
+          
+          <div id="form-gider" class="form hidden">
+            <h3>Yeni Gider</h3>
+            <select id="gider-kategori">
+              <option value="">Kategori Seçin</option>
+              <option value="Elektrik">⚡ Elektrik</option>
+              <option value="Su">💧 Su</option>
+              <option value="Kira">🏠 Kira</option>
+              <option value="Malzeme">🛠️ Malzeme</option>
+              <option value="Diğer">📌 Diğer</option>
+            </select>
+            <input type="text" id="gider-aciklama" placeholder="Açıklama" />
+            <input type="number" step="0.01" id="gider-tutar" placeholder="Tutar (₺)" />
+            <button onclick="addGider()">✓ Kaydet</button>
+          </div>
+
+          ${giderArray.length === 0 ? '<p style="text-align: center; color: #888; padding: 30px;">Gider yok</p>' : ''}
+          ${giderArray.map(([id, g]) => `
+            <div class="item" style="border-left-color: #dc2626;">
+              <button class="item-delete" onclick="deleteItem('gider', '${id}')">Sil</button>
+              <div class="item-title">${g.aciklama}</div>
+              <div class="item-info">📂 ${g.kategori} | 💰 ${g.tutar}₺ | 📅 ${g.tarih}</div>
+            </div>
+          `).join('')}
+        `;
+      }
+
+      html += `
+          <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+        </div>
+      `;
+
+      document.getElementById('app').innerHTML = html;
+    }
+
+    render();
   </script>
 </body>
 </html>
